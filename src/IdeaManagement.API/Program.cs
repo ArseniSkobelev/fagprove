@@ -4,6 +4,17 @@ using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 {
+    // auth configuration
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    }).AddJwtBearer(options =>
+    {
+        options.Authority = builder.Configuration["auth0_authority"];
+        options.Audience = builder.Configuration["auth0_identifier"];
+    });
+    
     // swagger configuration
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(c =>
@@ -52,6 +63,11 @@ var app = builder.Build();
         app.UseSwaggerUI();
     }
 
+    app.UseRouting();
+    
+    app.UseAuthentication();  
+    app.UseAuthorization();
+    
     app.MapControllers();
     app.UseHttpsRedirection();
     app.Run();
