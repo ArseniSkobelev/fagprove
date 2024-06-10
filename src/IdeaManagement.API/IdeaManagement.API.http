@@ -1,0 +1,6 @@
+@IdeaManagement.API_HostAddress = http://localhost:5214
+
+GET {{IdeaManagement.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
