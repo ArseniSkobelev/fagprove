@@ -1,5 +1,9 @@
 ﻿@page "/"
+@using IdeaManagement.Shared
+@using IdeaManagement.WebUI.Domain.SignalR
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
+@using HubConnectionBuilder = IdeaManagement.WebUI.Domain.SignalR.HubConnectionBuilder
 @attribute [Authorize]
 
 <PageTitle>Home</PageTitle>
@@ -7,3 +11,42 @@
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
+
+@code {
+    [Inject] public HttpClient HttpClient { get; set; } = default!;
+    [Inject] public HubConnectionBuilder CustomHubConnectionBuilder { get; set; } = default!;
+    [Inject] public IConfiguration Configuration { get; set; } = default!;
+
+    private HubConnection? _testHub;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var restApiUri = Configuration["restapi_uri"];
+
+        if (string.IsNullOrWhiteSpace(restApiUri))
+            throw new Exception("Missing REST API uri configuration");
+        
+        _testHub = await CustomHubConnectionBuilder
+            .BuildAuthenticatedHubConnectionAsync($"{restApiUri}{Constants.SignalRHubs.TestHub}");
+
+        if (_testHub == null)
+        {
+            throw new Exception("Unable to connect to test hub");
+        }
+
+        _testHub.On<string>("SendMessage", HandleTestHubMessage);
+
+        await _testHub.StartAsync();
+        
+        var res = await HttpClient.GetAsync("Test");
+
+        var body = await res.Content.ReadAsStringAsync();
+        
+        Console.WriteLine(body);
+    }
+
+    private void HandleTestHubMessage(string message)
+    {
+        Console.WriteLine(message);
+    }
+}

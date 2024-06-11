@@ -1,5 +1,6 @@
 using IdeaManagement.WebUI;
 using IdeaManagement.WebUI.Domain.Authentication;
+using IdeaManagement.WebUI.Domain.SignalR;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -10,6 +11,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped<CustomAuthorizationMessageHandler>();
+builder.Services.AddScoped<HubConnectionBuilder, CustomHubConnectionBuilder>();
 
 builder.Services.AddHttpClient("ServerAPI", client => client.BaseAddress = new Uri(builder.Configuration["restapi_uri"] ?? throw new Exception("Missing REST API uri configuration")))
     .AddHttpMessageHandler<CustomAuthorizationMessageHandler>();

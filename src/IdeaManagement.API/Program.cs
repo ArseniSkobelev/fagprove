@@ -1,9 +1,34 @@
+using IdeaManagement.API.Hubs;
+using IdeaManagement.Shared;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 {
+    // cors configuration
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("SpaCorsPolicy",
+            corsBuilder =>
+            {
+                var spaBaseUri = builder.Configuration["spa_baseuri"];
+                corsBuilder.WithOrigins(spaBaseUri)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader();
+            });
+    });
+    
+    // signalr configuration
+    builder.Services.AddSignalR();
+
+    builder.Services.AddResponseCompression(opts =>
+    {
+        opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+            new[] { "application/octet-stream" });
+    });
+    
     // auth configuration
     builder.Services.AddAuthentication(options =>
     {
@@ -13,6 +38,25 @@ var builder = WebApplication.CreateBuilder(args);
     {
         options.Authority = builder.Configuration["auth0_authority"];
         options.Audience = builder.Configuration["auth0_identifier"];
+
+        // inject the access_token from the request into the event context
+        // ref; https://learn.microsoft.com/en-us/aspnet/core/signalr/authn-and-authz?view=aspnetcore-8.0
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) && (path.StartsWithSegments(Constants.SignalRHubs.Base)))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
     
     // swagger configuration
@@ -64,11 +108,16 @@ var app = builder.Build();
     }
 
     app.UseRouting();
+    app.UseCors("SpaCorsPolicy");
     
     app.UseAuthentication();  
     app.UseAuthorization();
     
     app.MapControllers();
     app.UseHttpsRedirection();
+
+    // map signalr hubs
+    app.MapHub<TestHub>(Constants.SignalRHubs.TestHub);
+    
     app.Run();
 }
