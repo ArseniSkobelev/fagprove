@@ -1,3 +1,6 @@
+using IdeaManagement.API.Domain.Database;
+using IdeaManagement.API.Repositories;
+using IdeaManagement.API.Services;
 using IdeaManagement.Shared;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -93,9 +96,17 @@ var builder = WebApplication.CreateBuilder(args);
     });
     
     builder.Services.AddControllers();
+    
+    // add service and repos
+    builder.Services.AddScoped<IStatusRepository, StatusRepository>();
+    builder.Services.AddScoped<IStatusService, StatusService>();
+    builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+    builder.Services.AddScoped<ICategoryService, CategoryService>();
+    builder.Services.AddScoped<IIdeasRepository, IdeasRepository>();
+    builder.Services.AddScoped<IIdeasService, IdeasService>();
 
     // add mongodb to di container
-    builder.Services.AddSingleton(new MongoClient(new MongoUrl(builder.Configuration["mongodb_connection_string"] ?? throw new Exception("No MongoDB connection string found"))));
+    builder.Services.AddSingleton(new MongoClient(new MongoUrl(builder.Configuration["mongodb_connection_string"] ?? throw new Exception("No MongoDB connection string found"))).GetDatabase("IdeaManagement"));
 }
 
 var app = builder.Build();
@@ -104,6 +115,14 @@ var app = builder.Build();
     {
         app.UseSwagger();
         app.UseSwaggerUI();
+    }
+    
+    // seed db
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        var context = services.GetRequiredService<IMongoDatabase>();
+        await DatabaseSeeder.SeedAsync(context);
     }
 
     app.UseRouting();

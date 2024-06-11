@@ -2,6 +2,10 @@
     font-family: Inter, sans-serif;
 }
 
+h1:focus {
+    outline: none;
+}
+
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
 }
@@ -78,4 +82,12 @@
 
 code {
     color: #c02d76;
+}
+
+.rz-notification {
+    bottom: 0 !important;
+    float: right !important;
+    right: 1rem !important;
+    top: unset !important;
+    left: unset !important;
 }

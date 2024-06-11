@@ -1,0 +1,12 @@
+using IdeaManagement.Shared.Entities;
+
+namespace IdeaManagement.API.Services;
+
+public interface ICategoryService
+{
+    public Task CreateCategory(string title);
+    public List<Category> GetAllCategories();
+    public Category FindCategoryById(string categoryId);
+    public Task DeleteCategoryById(string categoryId);
+    public Task UpdateCategoryTitleById(string categoryId, string newTitle);
+}
