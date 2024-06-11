@@ -1,4 +1,3 @@
-using IdeaManagement.API.Hubs;
 using IdeaManagement.Shared;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -117,7 +116,6 @@ var app = builder.Build();
     app.UseHttpsRedirection();
 
     // map signalr hubs
-    app.MapHub<TestHub>(Constants.SignalRHubs.TestHub);
     
     app.Run();
 }

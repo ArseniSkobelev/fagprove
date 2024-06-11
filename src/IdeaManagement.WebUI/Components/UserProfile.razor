@@ -34,12 +34,11 @@
                         </RadzenStack>
                     </RadzenStack>
                 </Template>
-                @* <ChildContent> *@
-                @*     <RadzenStack class="rz-p-2" Gap=".5rem"> *@
-                @*         <RadzenButton Text="Copy access token" Icon="content_copy" Click="@CopyAccessToken" ButtonStyle="ButtonStyle.Secondary" /> *@
-                @*         <RadzenButton Text="Sign out" Icon="logout" Click="@NavigateToSignOut" /> *@
-                @*     </RadzenStack> *@
-                @* </ChildContent> *@
+                <ChildContent>
+                    <RadzenStack class="rz-p-2" Gap=".5rem">
+                        <RadzenButton Text="Sign out" Icon="logout" Click="@NavigateToSignOut" />
+                    </RadzenStack>
+                </ChildContent>
             </RadzenProfileMenu>
         </Authorized>
         <NotAuthorized>
