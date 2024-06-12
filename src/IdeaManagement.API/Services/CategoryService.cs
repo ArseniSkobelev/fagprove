@@ -1,4 +1,5 @@
 using IdeaManagement.API.Repositories;
+using IdeaManagement.Shared.DTOs;
 using IdeaManagement.Shared.Entities;
 
 namespace IdeaManagement.API.Services;
@@ -19,4 +20,7 @@ public class CategoryService(ICategoryRepository categoryRepository) : ICategory
 
     public async Task UpdateCategoryTitleById(string categoryId, string newTitle) =>
         await categoryRepository.UpdateCategoryTitleById(categoryId, newTitle);
+
+    public async Task UpdateCategoryOwner(string categoryId, string ownerId) =>
+        await categoryRepository.UpdateCategoryOwner(categoryId, ownerId);
 }

@@ -28,7 +28,7 @@
 
                                 if (roleClaim != null)
                                 {
-                                    <RadzenText Style="margin: 0;" TextStyle="TextStyle.Body2">@roleClaim.Value</RadzenText>
+                                    <RadzenText Style="margin: 0;" TextStyle="TextStyle.Body2">@RoleStringMapping.GetFriendlyRoleName(roleClaim.Value)</RadzenText>
                                 }
                             }
                         </RadzenStack>

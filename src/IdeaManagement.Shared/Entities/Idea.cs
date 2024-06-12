@@ -10,6 +10,9 @@ public class Idea : BaseEntity
 
     public int Upvotes { get; set; } = 0;
     
-    public required KeyValuePair<string, string> Status { get; set; }
+    public required KeyValuePair<string, string> Author { get; set; }
+    public KeyValuePair<string, string>? LatestEditor { get; set; } = null;
+    
+    public required string StatusId { get; set; }
     public required string CategoryId { get; set; }
 }

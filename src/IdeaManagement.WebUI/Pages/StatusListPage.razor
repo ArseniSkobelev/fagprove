@@ -1,0 +1,197 @@
+@page "/statuses"
+@attribute [Authorize(Roles = Roles.Administrator)]
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+    <RadzenBreadCrumb>
+        <Template Context="item">
+            <IdeaBreadCrumbTemplate ItemContext="item" />
+        </Template>
+        <ChildContent>
+            <RadzenBreadCrumbItem Text="Statuses" Path="/statuses" />
+        </ChildContent>
+    </RadzenBreadCrumb>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+        <RadzenText TextStyle="TextStyle.H5" Style="margin: 0">Statuses</RadzenText>
+        <RadzenButton Text="Add new status" Icon="add_circle_outline" Click="@(() => AddStatus())" />
+    </RadzenStack>
+
+    <RadzenCard>
+        <RadzenText>This page is displaying all of the previously added statuses</RadzenText>
+    </RadzenCard>
+
+    @if (_statuses == null)
+    {
+        <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" ShowValue="@false" />
+        return;
+    }
+
+    <RadzenDataGrid FilterCaseSensitivity="@FilterCaseSensitivity.CaseInsensitive" TItem="@Status" Data="@_statuses" PageSize="10" AllowSorting AllowPaging AllowFiltering>
+        <Columns>
+            <RadzenDataGridColumn TItem="@Status" Property="Title" Title="Status title"></RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@Status">
+                <Template>
+                    <RadzenButton Style="width: 100%" Text="Delete status" ButtonStyle="ButtonStyle.Danger" Click="@(() => DeleteStatus(context.Id))" />
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@Status">
+                <Template>
+                    <RadzenButton Style="width: 100%" Text="Edit status" Icon="edit" Click="@(() => EditStatus(context.Id))" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</RadzenStack>
+
+@code {
+    [Inject] 
+    public NavigationManager NavigationManager { get; set; } = default!;
+    
+    [Inject] 
+    public HttpClient HttpClient { get; set; } = default!;
+    
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
+    private List<Status>? _statuses = null;
+    private string? _tempStatusTitle = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchStatuses();
+    }
+
+    private async Task FetchStatuses()
+    {
+        try
+        {
+            _statuses = await HttpClient.GetFromJsonAsync<List<Status>>("Status/qry_get_all_statuses");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to fetch statuses");
+        }
+    }
+
+    private async Task DeleteStatus(string statusId)
+    {
+        if (_statuses == null)
+            return;
+        
+        var confirmation = await DialogService.Confirm("Are you sure that you want to delete this status?", "Status deletion confirmation", options: new ConfirmOptions()
+        {
+            CloseDialogOnEsc = true,
+            CloseDialogOnOverlayClick = true,
+            CancelButtonText = "Cancel",
+            OkButtonText = "Delete"
+        });
+
+        if (confirmation is null or false)
+            return;
+
+        try
+        {
+            await HttpClient.PostAsync($"Status/cmd_delete_status/{statusId}", null);
+
+            NotificationService.Notify(NotificationSeverity.Success, "Status deleted successfully");
+
+            await FetchStatuses();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to delete status");
+        }
+    }
+
+    private async Task AddStatus()
+    {
+        if (_statuses == null)
+            return;
+        
+        // show modal
+        var result = await DialogService.OpenAsync("Add new status", ds =>
+            @<RadzenStack Orientation="Orientation.Vertical">
+                <RadzenTextBox Placeholder="Title" Value="@_tempStatusTitle" bind-Value="@_tempStatusTitle" @oninput="@((e) => _tempStatusTitle = e.Value.ToString())" />
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
+                    <RadzenButton Text="Add" Icon="add_circle_outline" Click="() => ds.Close(true)" />
+                    <RadzenButton Text="Cancel" Icon="close" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light"/>
+        </RadzenStack>
+        </RadzenStack>);
+        
+        if (result is not bool or false)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_tempStatusTitle))
+            return;
+
+        try
+        {
+            var cmd = new Commands.CreateStatusCommand(_tempStatusTitle);
+            
+            await HttpClient.PostAsJsonAsync("Status/cmd_create_status", cmd);
+
+            await FetchStatuses();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Status added successfully");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to add status. Please try again later");
+        }
+        
+        _tempStatusTitle = null;
+    }
+
+    private async Task EditStatus(string statusId)
+    {
+        if (_statuses == null)
+            return;
+
+        var foundStatus = _statuses.FirstOrDefault(x => x.Id == statusId);
+
+        if (foundStatus == null)
+            return;
+
+        _tempStatusTitle = foundStatus.Title;
+        
+        // show modal
+        var result = await DialogService.OpenAsync("Edit status title", ds =>
+            @<RadzenStack Orientation="Orientation.Vertical">
+                <RadzenTextBox Placeholder="Title" Value="@_tempStatusTitle" bind-Value="@_tempStatusTitle" @oninput="@((e) => _tempStatusTitle= e.Value.ToString())" />
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
+                    <RadzenButton Text="Save" Icon="save" Click="() => ds.Close(true)" />
+                    <RadzenButton Text="Cancel" Icon="close" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light"/>
+        </RadzenStack>
+        </RadzenStack>);
+        
+        if (result is not bool or false)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_tempStatusTitle))
+            return;
+
+        try
+        {
+            var cmd = new Commands.UpdateStatusTitleByIdCommand(_tempStatusTitle);
+            
+            await HttpClient.PostAsJsonAsync($"Status/cmd_update_status_title/{statusId}", cmd);
+
+            await FetchStatuses();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Status updated successfully");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to update status. Please try again later");
+        }
+        
+        _tempStatusTitle = null;
+    }
+}

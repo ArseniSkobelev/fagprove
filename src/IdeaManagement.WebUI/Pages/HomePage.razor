@@ -1,6 +1,5 @@
 ﻿@page "/"
-@using IdeaManagement.Shared.DTOs
-@attribute [Authorize]
+@attribute [Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner},{Roles.IdeaContributor}")]
 @inject NavigationManager NavigationManager
 
 <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
@@ -37,14 +36,15 @@
 
     <RadzenDataGrid FilterCaseSensitivity="@FilterCaseSensitivity.CaseInsensitive" TItem="@DTOs.IdeaSlim" Data="@_ideas" PageSize="10" AllowSorting AllowPaging AllowFiltering>
         <Columns>
-            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Width="256px" Property="Title" Title="Idea title">
+            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="Title" Title="Idea title">
                 <Template>
                     <RadzenLink Text="@context.Title" Path="@($"/idea/{context.Id}")" />
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="AuthorHandle" Title="Author name"></RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="Status" Title="Status"></RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="Upvotes" Title="Upvotes"></RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Width="120px" Property="Upvotes" Title="Upvotes"></RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="Category" Title="Category"></RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="@DTOs.IdeaSlim">
                 <Template>
                     <RadzenButton Icon="@(_votes.FirstOrDefault(x => x == context.Id) != null ? "thumb_down" : "thumb_up")" Text="@(_votes.FirstOrDefault(x => x == context.Id) != null ? "Remove vote" : "Upvote")" Style="width: 100%" Click="@(_votes.FirstOrDefault(x => x == context.Id) != null ? () => RemoveVote(context.Id) : () => UpvoteIdea(context.Id))" />

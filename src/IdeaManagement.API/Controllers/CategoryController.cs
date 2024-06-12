@@ -41,4 +41,12 @@ public class CategoryController(ICategoryService categoryService) : ControllerBa
         await categoryService.UpdateCategoryTitleById(categoryId, cmd.NewTitle);
         return Ok();
     }
+    
+    [Authorize(Roles = Roles.Administrator)]
+    [HttpPost("cmd_update_category_owner/{categoryId}")]
+    public async Task<IActionResult> UpdateCategoryOwnerCommandHandler(string categoryId, [FromBody] Commands.UpdateCategoryOwnerCommand cmd)
+    {
+        await categoryService.UpdateCategoryOwner(categoryId, cmd.OwnerId);
+        return Ok();
+    }
 }

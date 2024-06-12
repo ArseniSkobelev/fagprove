@@ -9,5 +9,23 @@ public static class DTOs
         DateTime UpdatedAt,
         DateTime CreatedAt,
         string Status,
-        int Upvotes);
+        int Upvotes,
+        string Category);
+
+    public record IdeaFull(
+        string Id,
+        string Title,
+        string? Description,
+        KeyValuePair<string, string> Author,
+        KeyValuePair<string, string>? LatestEditor,
+        DateTime UpdatedAt,
+        DateTime CreatedAt,
+        string Status,
+        int Upvotes,
+        string Category);
+
+    public record ApplicationUser(
+        string UserId,
+        string Name,
+        string Email);
 }

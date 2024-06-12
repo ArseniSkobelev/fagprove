@@ -104,6 +104,7 @@ var builder = WebApplication.CreateBuilder(args);
     builder.Services.AddScoped<ICategoryService, CategoryService>();
     builder.Services.AddScoped<IIdeasRepository, IdeasRepository>();
     builder.Services.AddScoped<IIdeasService, IdeasService>();
+    builder.Services.AddScoped<IAuth0Service, Auth0Service>();
 
     // add mongodb to di container
     builder.Services.AddSingleton(new MongoClient(new MongoUrl(builder.Configuration["mongodb_connection_string"] ?? throw new Exception("No MongoDB connection string found"))).GetDatabase("IdeaManagement"));

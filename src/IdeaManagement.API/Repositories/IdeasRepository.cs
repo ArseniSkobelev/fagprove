@@ -1,11 +1,12 @@
 using IdeaManagement.Shared;
 using IdeaManagement.Shared.DTOs;
 using IdeaManagement.Shared.Entities;
+using IdeaManagement.Shared.Exceptions;
 using MongoDB.Driver;
 
 namespace IdeaManagement.API.Repositories;
 
-public class IdeasRepository(IMongoDatabase db, IStatusRepository statusRepository) : IIdeasRepository
+public class IdeasRepository(IMongoDatabase db, IStatusRepository statusRepository, ICategoryRepository categoryRepository) : IIdeasRepository
 {
     private readonly IMongoCollection<Idea> _ideaCollection = 
         db.GetCollection<Idea>(Constants.DatabaseCollections.Ideas);
@@ -13,21 +14,77 @@ public class IdeasRepository(IMongoDatabase db, IStatusRepository statusReposito
     private readonly IMongoCollection<Vote> _voteCollection = 
         db.GetCollection<Vote>(Constants.DatabaseCollections.Votes);
 
-    public List<DTOs.IdeaSlim> GetAllIdeas() =>
-        _ideaCollection
-            .AsQueryable()
-            .Select(x => new DTOs.IdeaSlim(x.Id, x.Title, x.AuthorHandle, x.UpdatedAt, x.CreatedAt, x.Status.Value, x.Upvotes))
-            .ToList();
-
-    public Task<Idea> GetIdeaDetails(string ideaId)
+    public List<DTOs.IdeaSlim> GetAllIdeas()
     {
-        throw new NotImplementedException();
+        List<DTOs.IdeaSlim> ideas = new List<DTOs.IdeaSlim>();
+        
+        foreach (var idea in _ideaCollection.AsQueryable().ToList())
+        {
+            var categoryTitle = "Unknown";
+            var statusTitle = "Unknown";
+
+            try
+            {
+                var category = categoryRepository.FindCategoryById(idea.CategoryId);
+                categoryTitle = category.Title;
+            }
+            catch (DatabaseExceptions.DocumentNotFoundException e)
+            {
+                // omitted
+            }
+
+            try
+            {
+                var status = statusRepository.GetStatusById(idea.StatusId);
+                statusTitle = status.Title;
+            }
+            catch (DatabaseExceptions.DocumentNotFoundException e)
+            {
+                // omitted
+            }
+            
+            ideas.Add(new DTOs.IdeaSlim(idea.Id, idea.Title, idea.Author.Value, idea.UpdatedAt, idea.CreatedAt, statusTitle, idea.Upvotes, categoryTitle));
+        }
+
+        return ideas;
+    }
+
+    public DTOs.IdeaFull GetIdeaDetails(string ideaId)
+    {
+        var idea = _ideaCollection
+            .AsQueryable()
+            .FirstOrDefault(x => x.Id == ideaId) ?? throw new DatabaseExceptions.DocumentNotFoundException("Idea not found");
+
+        var categoryTitle = "Unknown";
+        var statusTitle = "Unknown";
+
+        try
+        {
+            var category = categoryRepository.FindCategoryById(idea.CategoryId);
+            categoryTitle = category.Title;
+        }
+        catch (DatabaseExceptions.DocumentNotFoundException e)
+        {
+            // omitted
+        }
+
+        try
+        {
+            var status = statusRepository.GetStatusById(idea.StatusId);
+            statusTitle = status.Title;
+        }
+        catch (DatabaseExceptions.DocumentNotFoundException e)
+        {
+            // omitted
+        }
+
+        return new DTOs.IdeaFull(idea.Id, idea.Title, idea.Description, new (idea.AuthorId, idea.AuthorHandle), idea.LatestEditor,
+            idea.UpdatedAt, idea.CreatedAt, statusTitle, idea.Upvotes, categoryTitle);
     }
 
     public async Task CreateIdea(string title, string? description, string authorId,
         string authorHandle, string statusId, string categoryId)
     {
-        var status = statusRepository.GetStatusById(statusId);
         
         await _ideaCollection.InsertOneAsync(new Idea()
         {
@@ -35,9 +92,10 @@ public class IdeasRepository(IMongoDatabase db, IStatusRepository statusReposito
             Description = description,
             AuthorId = authorId,
             AuthorHandle = authorHandle,
-            Status = new KeyValuePair<string, string>(statusId, status.Title),
+            StatusId = statusId,
             Upvotes = 0,
-            CategoryId = categoryId
+            CategoryId = categoryId,
+            Author = new KeyValuePair<string, string>(authorId, authorHandle)
         });
     }
 
@@ -83,4 +141,44 @@ public class IdeasRepository(IMongoDatabase db, IStatusRepository statusReposito
             .Where(x => x.UserId == userId)
             .Select(x => x.IdeaId)
             .ToList();
+
+    public Task DeleteIdea(string ideaId) =>
+        _ideaCollection
+            .DeleteOneAsync(Builders<Idea>.Filter.Eq(x => x.Id, ideaId));
+
+    public async Task UpdateIdeaTitle(string ideaId, string newTitle)
+    {
+        var filter = Builders<Idea>.Filter.Eq(x => x.Id, ideaId);
+
+        var update = Builders<Idea>.Update.Set(x => x.Title, newTitle);
+
+        await _ideaCollection.UpdateOneAsync(filter, update);
+    }
+
+    public async Task UpdateIdeaDescription(string ideaId, string newDescription)
+    {
+        var filter = Builders<Idea>.Filter.Eq(x => x.Id, ideaId);
+
+        var update = Builders<Idea>.Update.Set(x => x.Description, newDescription);
+
+        await _ideaCollection.UpdateOneAsync(filter, update);
+    }
+
+    public async Task UpdateIdeaStatus(string ideaId, string newStatusId)
+    {
+        var filter = Builders<Idea>.Filter.Eq(x => x.Id, ideaId);
+
+        var update = Builders<Idea>.Update.Set(x => x.StatusId, newStatusId);
+
+        await _ideaCollection.UpdateOneAsync(filter, update);
+    }
+
+    public async Task UpdateIdeaCategory(string ideaId, string newCategoryId)
+    {
+        var filter = Builders<Idea>.Filter.Eq(x => x.Id, ideaId);
+
+        var update = Builders<Idea>.Update.Set(x => x.CategoryId, newCategoryId);
+
+        await _ideaCollection.UpdateOneAsync(filter, update);
+    }
 }

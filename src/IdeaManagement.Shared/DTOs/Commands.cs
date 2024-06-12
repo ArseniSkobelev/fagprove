@@ -7,4 +7,8 @@ public static class Commands
     public record CreateCategoryCommand(string Title);
     public record UpdateCategoryTitleByIdCommand(string NewTitle);
     public record UpdateStatusTitleByIdCommand(string NewTitle);
+    public record SingleStringUpdateCommand(string NewValue);
+    public record UpdateIdeaStatusCommand(string StatusId);
+    public record UpdateIdeaCategoryCommand(string CategoryId);
+    public record UpdateCategoryOwnerCommand(string OwnerId);
 }

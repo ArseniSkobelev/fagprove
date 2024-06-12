@@ -32,4 +32,12 @@ public class CategoryRepository(IMongoDatabase db) : ICategoryRepository
     public async Task UpdateCategoryTitleById(string categoryId, string newTitle) =>
         await _categoryCollection
             .UpdateOneAsync(Builders<Category>.Filter.Eq(x => x.Id, categoryId), Builders<Category>.Update.Set(x => x.Title, newTitle));
+
+    public async Task UpdateCategoryOwner(string categoryId, string ownerId)
+    {
+        var filter = Builders<Category>.Filter.Eq(x => x.Id, categoryId);
+        var update = Builders<Category>.Update.Set(x => x.OwnerId, ownerId);
+
+        await _categoryCollection.UpdateOneAsync(filter, update);
+    }
 }
