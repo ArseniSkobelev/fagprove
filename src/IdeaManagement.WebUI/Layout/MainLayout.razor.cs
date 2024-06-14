@@ -41,7 +41,7 @@ public partial class MainLayout
 
         if (_ideaHub == null)
         {
-            NotificationService.Notify(NotificationSeverity.Error, "Unable to enable notifications");
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to enable notifications. Please click this notification to retry connection", click: async (ns) => await InitializeSignalRConnection(), duration: 10000);
             return;
         }
 
@@ -50,6 +50,8 @@ public partial class MainLayout
         _ideaHub.On<string, string, string>(SignalR.Methods.IdeaStatusChanged, HandleIdeaStatusChanged);
 
         await _ideaHub.StartAsync();
+
+        NotificationService.Notify(NotificationSeverity.Success, "Notifications enabled");
     }
 
     private async Task HandleNewIdeaAdded(string authorHandle, string ideaTitle)
