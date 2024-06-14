@@ -79,13 +79,6 @@
                     <AuthorizeView Roles="@($"{Roles.Administrator},{Roles.CategoryOwner}")">
                         <RadzenButton Click="@EditIdeaStatus" Icon="edit" Size="ButtonSize.ExtraSmall" />
                     </AuthorizeView>
-                    <AuthorizeView Roles="@Roles.CategoryOwner">
-                        @* "is true" is used instead of simple if(x) to negate the nullable properties of the variable *@
-                        @if (_isIdeaInUserOwnedCategory is true)
-                        {
-                            <RadzenButton Click="@EditIdeaStatus" Icon="edit" Size="ButtonSize.ExtraSmall"/>
-                        }
-                    </AuthorizeView>
                 </RadzenStack>
             </RadzenStack>
             
@@ -213,7 +206,6 @@
     private string? _tempCategoryTitle = null;
     private string? _ideaCategory = null;
     private List<Category>? _categories = null;
-    private bool? _isIdeaInUserOwnedCategory = null;
     private List<DTOs.CommentDetails>? _comments = null;
     private string? _tempCommentContent = null;
 
@@ -231,7 +223,6 @@
         await FetchIdeaDetails();
         await FetchStatuses();
         await FetchCategories();
-        await FetchIdeaInUserOwnedCategory();
         await FetchComments();
     }
 
@@ -269,30 +260,6 @@
         {
             Console.WriteLine(e);
             NotificationService.Notify(NotificationSeverity.Error, "Unable to fetch idea details. Please try again later");
-        }
-    }
-
-    private async Task FetchIdeaInUserOwnedCategory()
-    {
-        if (_authState == null || _idea == null)
-            return;
-        
-        if (!_authState.User.IsInRole(Roles.CategoryOwner))
-            return;
-
-        try
-        {
-            var userOwnedCategories = await HttpClient.GetFromJsonAsync<List<Category>>("Category/qry_get_user_owned_categories");
-
-            if (userOwnedCategories == null)
-                return;
-
-            _isIdeaInUserOwnedCategory = userOwnedCategories.Select(x => x.Id).Contains(_idea.Category.Key);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
         }
     }
 

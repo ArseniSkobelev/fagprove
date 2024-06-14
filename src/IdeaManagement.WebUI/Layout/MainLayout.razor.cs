@@ -29,7 +29,7 @@ public partial class MainLayout
         await InitializeSignalRConnection();
     }
 
-    private async Task InitializeSignalRConnection()
+    private async Task InitializeSignalRConnection(bool retry = false)
     {
         var restApiUri = Configuration["restapi_uri"];
 
@@ -66,6 +66,8 @@ public partial class MainLayout
 
     private void HandleNewCommentAddedClick(string ideaId)
     {
+        // double navigation because state management is struggling to ensure that everything is loaded in time
+        NavigationManager.NavigateTo($"/");
         NavigationManager.NavigateTo($"/idea/{ideaId}");
     }
     

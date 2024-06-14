@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.SignalR;
 namespace IdeaManagement.API.Hubs;
 
 [Authorize]
-public class IdeaHub(IHubContext<IdeaHub> context, UserRoleMapping userRoleMapping, IAuth0Service auth0Service, IIdeasService ideasService, ICategoryService categoryService) : Hub
+public class IdeaHub(IHubContext<IdeaHub> context, UserRoleMapping userRoleMapping, IAuth0Service auth0Service, IIdeasService ideasService, ICategoryService categoryService) : Hub<IIdeaHubClient>
 {
     private static readonly HubConnectionMapping<string> _connections = new();
 
