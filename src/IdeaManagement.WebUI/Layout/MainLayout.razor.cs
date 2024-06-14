@@ -41,22 +41,38 @@ public partial class MainLayout
 
         if (_ideaHub == null)
         {
-            NotificationService.Notify(NotificationSeverity.Error, "Unable to enable notifications. Please click this notification to retry connection", click: async (ns) => await InitializeSignalRConnection(), duration: 10000);
+            NotificationService.Notify(NotificationSeverity.Error,
+                "Unable to enable notifications. Please click this notification to retry connection",
+                closeOnClick: true,
+                click: async (nm) => { await InitializeSignalRConnection(true); }, duration: 10000);
             return;
         }
 
-        _ideaHub.On<string, string>(SignalR.Methods.NewIdeaAdded, HandleNewIdeaAdded);
+        _ideaHub.On<string, string, string, bool>(SignalR.Methods.NewIdeaAdded, HandleNewIdeaAdded);
         _ideaHub.On<string, string>(SignalR.Methods.NewCommentAdded, HandleNewCommentAdded);
         _ideaHub.On<string, string, string>(SignalR.Methods.IdeaStatusChanged, HandleIdeaStatusChanged);
+        _ideaHub.On(SignalR.Methods.IdeasUpdated, HandleIdeasUpdated);
 
         await _ideaHub.StartAsync();
 
-        NotificationService.Notify(NotificationSeverity.Success, "Notifications enabled");
+        if (retry)
+        {
+            NotificationService.Notify(NotificationSeverity.Success, "Notifications enabled successfully");
+        }
     }
 
-    private async Task HandleNewIdeaAdded(string authorHandle, string ideaTitle)
+    private async Task HandleIdeasUpdated()
     {
-        NotificationService.Notify(NotificationSeverity.Info, "New idea added", $"{authorHandle} added a new idea \"{ideaTitle}\"", duration: 10000);
+        NotificationService.Notify(NotificationSeverity.Warning, "Some ideas have recently been updated. Please mind that some information may be outdated", duration: 10000);
+    }
+
+    private async Task HandleNewIdeaAdded(string authorHandle, string ideaTitle, string categoryTitle, bool targetedToCategoryOwner)
+    {
+        NotificationService.Notify(NotificationSeverity.Info, "New idea added",
+            !targetedToCategoryOwner
+                ? $"{authorHandle} added a new idea \"{ideaTitle}\""
+                : $"{authorHandle} added a new idea \"{ideaTitle}\" in your category \"{categoryTitle}\"",
+            duration: 10000);
     }
     
     private async Task HandleNewCommentAdded(string ideaId, string ideaTitle)

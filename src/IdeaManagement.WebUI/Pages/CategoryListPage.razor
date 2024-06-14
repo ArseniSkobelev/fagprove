@@ -26,6 +26,12 @@
         return;
     }
 
+    @if (!_categories.Any())
+    {
+        <RadzenText TextStyle="TextStyle.Body2">No categories have been found..</RadzenText>
+        return;
+    }
+
     <RadzenDataGrid FilterCaseSensitivity="@FilterCaseSensitivity.CaseInsensitive" TItem="@Category" Data="@_categories" PageSize="10" AllowSorting AllowPaging AllowFiltering>
         <Columns>
             <RadzenDataGridColumn TItem="@Category" Property="Title" Title="Category title"></RadzenDataGridColumn>
@@ -35,8 +41,11 @@
                         var user = _users.FirstOrDefault(x => x.UserId == context.OwnerId);
 
                         if (user == null)
+                        {
+                            <RadzenText Style="margin: 0" TextStyle="TextStyle.Body2">No owner assigned</RadzenText>
                             return;
-                        
+                        }
+
                         <RadzenText Style="margin: 0">@user.Email</RadzenText>
                     }
                 </Template>

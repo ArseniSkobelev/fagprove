@@ -7,7 +7,7 @@ public interface IIdeasRepository
 {
     public List<DTOs.IdeaSlim> GetAllIdeas();
     public DTOs.IdeaFull GetIdeaDetails(string ideaId);
-    public Task CreateIdea(string title, string? description, string authorId, string authorHandle, string statusId, string categoryId);
+    public Task<Idea> CreateIdea(string title, string? description, string authorId, string authorHandle, string statusId, string categoryId);
     public Task UpvoteIdea(string ideaId, string userId);
     public Task RemoveVote(string ideaId, string userId);
     public List<string> GetUpvotedUserIdeas(string userId);

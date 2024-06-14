@@ -8,17 +8,17 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace IdeaManagement.API.Services;
 
-public class IdeasService(IIdeasRepository ideasRepository, IStatusRepository statusRepository, ICategoryRepository categoryRepository, IHubContext<IdeaHub> ideaHub) : IIdeasService
+public class IdeasService(IIdeasRepository ideasRepository, IStatusRepository statusRepository, ICategoryRepository categoryRepository) : IIdeasService
 {
-    public async Task CreateIdea(string title, string? description, string authorId, string authorHandle, string categoryId)
+    public async Task<Idea> CreateIdea(string title, string? description, string authorId, string authorHandle, string categoryId)
     {
         categoryRepository.FindCategoryById(categoryId);
         
         var newIdeaStatus = statusRepository.GetStatusByTitle(Constants.DefaultStatuses.NewIdea);
 
-        await ideasRepository.CreateIdea(title, description, authorId, authorHandle, newIdeaStatus.Id, categoryId);
+        var idea = await ideasRepository.CreateIdea(title, description, authorId, authorHandle, newIdeaStatus.Id, categoryId);
 
-        await ideaHub.Clients.All.SendAsync(SignalR.Methods.NewIdeaAdded, authorHandle, title);
+        return idea;
     }
 
     public List<DTOs.IdeaSlim> GetAllIdeas() => ideasRepository.GetAllIdeas();
@@ -58,14 +58,14 @@ public class IdeasService(IIdeasRepository ideasRepository, IStatusRepository st
     public async Task UpdateIdeaStatus(string ideaId, string userId, string cmdStatusId)
     {
         var status = statusRepository.GetStatusById(cmdStatusId);
-        var idea = ideasRepository.GetIdeaDetails(ideaId);
+
+        // check if idea exists using the pipeline in repo
+        ideasRepository.GetIdeaDetails(ideaId);
 
         if (status == null)
             throw new DatabaseExceptions.DocumentNotFoundException("Status not found");
 
         await ideasRepository.UpdateIdeaStatus(ideaId, cmdStatusId);
-        
-        await ideaHub.Clients.All.SendAsync(SignalR.Methods.IdeaStatusChanged, ideaId, status.Title, idea.Title);
     }
 
     public async Task UpdateIdeaCategory(string ideaId, string userId, string cmdCategoryId)

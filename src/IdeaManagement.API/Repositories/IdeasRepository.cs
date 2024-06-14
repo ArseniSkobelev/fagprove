@@ -84,11 +84,10 @@ public class IdeasRepository(IMongoDatabase db, IStatusRepository statusReposito
             idea.UpdatedAt, idea.CreatedAt, statusTitle, idea.Upvotes, new KeyValuePair<string, string>(categoryId, categoryTitle));
     }
 
-    public async Task CreateIdea(string title, string? description, string authorId,
+    public async Task<Idea> CreateIdea(string title, string? description, string authorId,
         string authorHandle, string statusId, string categoryId)
     {
-        
-        await _ideaCollection.InsertOneAsync(new Idea()
+        var idea = new Idea()
         {
             Title = title,
             Description = description,
@@ -98,7 +97,11 @@ public class IdeasRepository(IMongoDatabase db, IStatusRepository statusReposito
             Upvotes = 0,
             CategoryId = categoryId,
             Author = new KeyValuePair<string, string>(authorId, authorHandle)
-        });
+        };
+
+        await _ideaCollection.InsertOneAsync(idea);
+
+        return idea;
     }
 
     public async Task UpvoteIdea(string ideaId, string userId)
