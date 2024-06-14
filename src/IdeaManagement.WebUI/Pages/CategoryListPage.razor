@@ -1,0 +1,264 @@
+@page "/categories"
+@attribute [Authorize(Roles = Roles.Administrator)]
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+    <RadzenBreadCrumb>
+        <Template Context="item">
+            <IdeaBreadCrumbTemplate ItemContext="item" />
+        </Template>
+        <ChildContent>
+            <RadzenBreadCrumbItem Text="Categories" Path="/categories" />
+        </ChildContent>
+    </RadzenBreadCrumb>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+        <RadzenText TextStyle="TextStyle.H5" Style="margin: 0">Categories</RadzenText>
+        <RadzenButton Text="Add new category" Icon="add_circle_outline" Click="@(() => AddCategory())" />
+    </RadzenStack>
+
+    <RadzenCard>
+        <RadzenText>This page is displaying all of the previously added categories</RadzenText>
+    </RadzenCard>
+
+    @if (_categories == null || _users == null)
+    {
+        <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" ShowValue="@false" />
+        return;
+    }
+
+    <RadzenDataGrid FilterCaseSensitivity="@FilterCaseSensitivity.CaseInsensitive" TItem="@Category" Data="@_categories" PageSize="10" AllowSorting AllowPaging AllowFiltering>
+        <Columns>
+            <RadzenDataGridColumn TItem="@Category" Property="Title" Title="Category title"></RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@Category" Title="Owner">
+                <Template>
+                    @{
+                        var user = _users.FirstOrDefault(x => x.UserId == context.OwnerId);
+
+                        if (user == null)
+                            return;
+                        
+                        <RadzenText Style="margin: 0">@user.Email</RadzenText>
+                    }
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@Category">
+                <Template>
+                    <RadzenButton Style="width: 100%" Text="Delete category" ButtonStyle="ButtonStyle.Danger" Click="@(() => DeleteCategory(context.Id))" />
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@Category">
+                <Template>
+                    <RadzenButton Style="width: 100%" Text="Edit category" Icon="edit" Click="@(() => EditCategory(context.Id))" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</RadzenStack>
+
+@code {
+    [Inject] 
+    public NavigationManager NavigationManager { get; set; } = default!;
+    
+    [Inject] 
+    public HttpClient HttpClient { get; set; } = default!;
+    
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
+    private List<Category>? _categories = null;
+    private string? _tempCategoryTitle = null;
+    private string? _tempUserEmail = null;
+    private List<DTOs.ApplicationUser>? _users = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchCategories();
+        await FetchUsers();
+    }
+
+    private async Task FetchUsers()
+    {
+        try
+        {
+            _users = await HttpClient.GetFromJsonAsync<List<DTOs.ApplicationUser>>("Auth0/qry_get_application_users");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to fetch users");
+        }
+    }
+
+    private async Task FetchCategories()
+    {
+        try
+        {
+            _categories = await HttpClient.GetFromJsonAsync<List<Category>>("Category/qry_get_all_categories");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to fetch categories");
+        }
+    }
+
+    private async Task DeleteCategory(string categoryId)
+    {
+        if (_categories == null)
+            return;
+        
+        var confirmation = await DialogService.Confirm("Are you sure that you want to delete this category?", "Category deletion confirmation", options: new ConfirmOptions()
+        {
+            CloseDialogOnEsc = true,
+            CloseDialogOnOverlayClick = true,
+            CancelButtonText = "Cancel",
+            OkButtonText = "Delete"
+        });
+
+        if (confirmation is null or false)
+            return;
+
+        try
+        {
+            await HttpClient.PostAsync($"Category/cmd_delete_category/{categoryId}", null);
+
+            NotificationService.Notify(NotificationSeverity.Success, "Category deleted successfully");
+
+            await FetchCategories();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to delete category");
+        }
+    }
+
+    private async Task AddCategory()
+    {
+        if (_categories == null || _users == null)
+            return;
+        
+        // show modal
+        var result = await DialogService.OpenAsync("Add new category", ds =>
+            @<RadzenStack Orientation="Orientation.Vertical">
+                <RadzenTextBox Placeholder="Title" Value="@_tempCategoryTitle" bind-Value="@_tempCategoryTitle" @oninput="@((e) => _tempCategoryTitle = e.Value.ToString())" />
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
+                    <RadzenButton Text="Add" Icon="add_circle_outline" Click="() => ds.Close(true)" />
+                    <RadzenButton Text="Cancel" Icon="close" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light"/>
+        </RadzenStack>
+        </RadzenStack>);
+        
+        if (result is not bool or false)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_tempCategoryTitle))
+            return;
+
+        try
+        {
+            var cmd = new Commands.CreateCategoryCommand(_tempCategoryTitle);
+            
+            await HttpClient.PostAsJsonAsync("Category/cmd_create_category", cmd);
+
+            await FetchCategories();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Category added successfully");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to add category. Please try again later");
+        }
+        
+        _tempCategoryTitle = null;
+    }
+
+    private async Task EditCategory(string categoryId)
+    {
+        if (_categories == null || _users == null)
+            return;
+
+        var foundCategory = _categories.FirstOrDefault(x => x.Id == categoryId);
+
+        if (foundCategory == null)
+            return;
+        
+        var categoryOwner = _users.FirstOrDefault(x => x.UserId == foundCategory.OwnerId);
+
+        if (categoryOwner != null)
+        {
+            _tempUserEmail = categoryOwner.Email;
+        }
+
+        _tempCategoryTitle = foundCategory.Title;
+        
+        // show modal
+        var result = await DialogService.OpenAsync("Edit category", ds =>
+            @<RadzenStack Orientation="Orientation.Vertical">
+                <RadzenStack Orientation="Orientation.Vertical" Gap=".25rem">
+                    <RadzenText>Category title</RadzenText>
+                    <RadzenTextBox Placeholder="Title" Value="@_tempCategoryTitle" bind-Value="@_tempCategoryTitle" @oninput="@((e) => _tempCategoryTitle = e.Value.ToString())"/>
+                </RadzenStack>
+                <RadzenStack Orientation="Orientation.Vertical" Gap=".25rem">
+                    <RadzenText>Category owner</RadzenText>
+                    <RadzenDropDown @bind-Value="@_tempUserEmail" Data="@_users.Where(x => x.Role == Roles.CategoryOwner).Select(x => x.Email)" />
+                </RadzenStack>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
+                    <RadzenButton Text="Save" Icon="save" Click="() => ds.Close(true)" />
+                    <RadzenButton Text="Cancel" Icon="close" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light"/>
+        </RadzenStack>
+        </RadzenStack>);
+        
+        if (result is not bool or false)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(_tempCategoryTitle))
+        {
+            try
+            {
+                var cmd = new Commands.UpdateCategoryTitleByIdCommand(_tempCategoryTitle);
+                
+                await HttpClient.PostAsJsonAsync($"Category/cmd_update_category_title/{categoryId}", cmd);
+
+                await FetchCategories();
+                
+                NotificationService.Notify(NotificationSeverity.Success, "Category updated successfully");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                NotificationService.Notify(NotificationSeverity.Error, "Unable to update category. Please try again later");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_tempUserEmail))
+        {
+            var user = _users.FirstOrDefault(x => x.Email == _tempUserEmail);
+
+            if (user == null)
+                return;
+            
+            try
+            {
+                var cmd = new Commands.UpdateCategoryOwnerCommand(user.UserId);
+                
+                await HttpClient.PostAsJsonAsync($"Category/cmd_update_category_owner/{categoryId}", cmd);
+
+                await FetchCategories();
+                
+                NotificationService.Notify(NotificationSeverity.Success, "Category updated successfully");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                NotificationService.Notify(NotificationSeverity.Error, "Unable to update category. Please try again later");
+            }
+        }
+        
+        _tempCategoryTitle = null;
+        _tempUserEmail = null;
+    }
+}

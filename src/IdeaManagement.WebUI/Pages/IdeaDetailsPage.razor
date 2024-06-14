@@ -1,0 +1,658 @@
+@page "/idea/{Id}"
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+    <RadzenBreadCrumb>
+        <Template Context="item">
+            <IdeaBreadCrumbTemplate ItemContext="item" />
+        </Template>
+        <ChildContent>
+            <RadzenBreadCrumbItem Text="Ideas" />
+            <RadzenBreadCrumbItem Path="/" Text="List" />
+            <RadzenBreadCrumbItem Path="@($"/idea/{Id}")" Text="@(_idea == null ? "Idea title" : _idea.Title)" />
+        </ChildContent>
+    </RadzenBreadCrumb>
+    
+    @if (_idea == null || _votes == null || _authState == null)
+    {
+        <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" ShowValue="@false" />
+        return;
+    }
+
+    <RadzenStack Orientation="Orientation.Horizontal" Gap=".5rem">
+        <RadzenText TextStyle="TextStyle.H5" Style="margin: 0">@_idea.Title</RadzenText>
+        @{
+            var userId = _authState.User.Claims.FirstOrDefault(x => x.Type == "sub");
+
+            if (userId != null && userId.Value == _idea.Author.Key)
+            {
+                <RadzenButton Click="@EditIdeaTitle" Icon="edit" Size="ButtonSize.ExtraSmall" />
+            }
+        }
+    </RadzenStack>
+    
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+        <RadzenButton Icon="@(_votes.FirstOrDefault(x => x == _idea.Id) != null ? "thumb_down" : "thumb_up")" Text="@(_votes.FirstOrDefault(x => x == _idea.Id) != null ? "Remove vote" : "Upvote")" Style="width: fit-content" Click="@(_votes.FirstOrDefault(x => x == _idea.Id) != null ? () => RemoveVote(_idea.Id) : () => UpvoteIdea(_idea.Id))" />
+        @{
+            var userId = _authState.User.Claims.FirstOrDefault(x => x.Type == "sub");
+
+            if (userId != null && userId.Value == _idea.Author.Key)
+            {
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Click="@(() => DeleteIdea())" Icon="delete" Text="Delete idea" />
+            }
+        }
+    </RadzenStack>
+
+    <RadzenCard>
+        <RadzenStack Orientation="Orientation.Vertical" Gap=".5rem">
+            <RadzenText Style="margin: 0" TextStyle="TextStyle.Subtitle1">Idea details</RadzenText>
+            
+            <RadzenStack Orientation="Orientation.Horizontal" Gap=".5rem" AlignItems="AlignItems.Center">
+                <RadzenText Style="margin: 0;" TextStyle="TextStyle.Subtitle1">Created at</RadzenText>
+                <RadzenText Style="margin: 0;">@_idea.CreatedAt.ToString("dd.MM.yyyy HH:mm")</RadzenText>
+            </RadzenStack>
+
+            @if (_idea.UpdatedAt != _idea.CreatedAt)
+            {
+                <RadzenStack Orientation="Orientation.Horizontal" Gap=".5rem" AlignItems="AlignItems.Center">
+                    <RadzenText Style="margin: 0;" TextStyle="TextStyle.Subtitle1">Last update</RadzenText>
+                    <RadzenText Style="margin: 0;">@_idea.UpdatedAt.ToString("dd.MM.yyyy HH:mm")</RadzenText>
+                </RadzenStack>
+            }
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap=".5rem" AlignItems="AlignItems.Center">
+                <RadzenText Style="margin: 0;" TextStyle="TextStyle.Subtitle1">Author</RadzenText>
+                <RadzenText Style="margin: 0;">@_idea.Author.Value</RadzenText>
+            </RadzenStack>
+
+            @if (_idea.LatestEditor != null)
+            {
+                <RadzenStack Orientation="Orientation.Horizontal" Gap=".5rem" AlignItems="AlignItems.Center">
+                    <RadzenText Style="margin: 0;" TextStyle="TextStyle.Subtitle1">Last updated by</RadzenText>
+                    <RadzenText Style="margin: 0;">@_idea.LatestEditor.Value</RadzenText>
+                </RadzenStack>
+            }
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap=".5rem" AlignItems="AlignItems.Center">
+                <RadzenStack Orientation="Orientation.Horizontal" Gap=".5rem">
+                    <RadzenText Style="margin: 0;" TextStyle="TextStyle.Subtitle1">Idea status</RadzenText>
+                    <RadzenText Style="margin: 0;">@_idea.Status</RadzenText>
+                    <AuthorizeView Roles="@($"{Roles.Administrator},{Roles.CategoryOwner}")">
+                        <RadzenButton Click="@EditIdeaStatus" Icon="edit" Size="ButtonSize.ExtraSmall" />
+                    </AuthorizeView>
+                </RadzenStack>
+            </RadzenStack>
+            
+            <RadzenStack Orientation="Orientation.Horizontal" Gap=".5rem" AlignItems="AlignItems.Center">
+                <RadzenText Style="margin: 0;" TextStyle="TextStyle.Subtitle1">Category</RadzenText>
+                <RadzenText Style="margin: 0;">@_idea.Category.Value</RadzenText>
+                @{
+                    var userId = _authState.User.Claims.FirstOrDefault(x => x.Type == "sub");
+
+                    if (userId != null && userId.Value == _idea.Author.Key || _authState.User.IsInRole(Roles.CategoryOwner))
+                    {
+                        <RadzenButton Click="@EditIdeaCategory" Icon="edit" Size="ButtonSize.ExtraSmall" />
+                    }
+                }
+            </RadzenStack>
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap=".5rem" AlignItems="AlignItems.Center">
+                <RadzenText Style="margin: 0;" TextStyle="TextStyle.Subtitle1">Upvotes</RadzenText>
+                <RadzenText Style="margin: 0;">@_idea.Upvotes</RadzenText>
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenCard>
+    
+    <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+        <RadzenCard class="w-100">
+            <RadzenStack Gap=".5rem" Orientation="Orientation.Vertical">
+                <RadzenStack Orientation="Orientation.Horizontal" Gap=".5rem">
+                    <RadzenText Style="margin: 0" TextStyle="TextStyle.Subtitle1">Idea description</RadzenText>
+                    @{
+                        var userId = _authState.User.Claims.FirstOrDefault(x => x.Type == "sub");
+
+                        if (userId != null && userId.Value == _idea.Author.Key)
+                        {
+                            <RadzenButton Click="@EditIdeaDescription" Icon="edit" Size="ButtonSize.ExtraSmall" />
+                        }
+                    }
+                </RadzenStack>
+                @if (string.IsNullOrWhiteSpace(_idea.Description))
+                {
+                    <RadzenText TextStyle="TextStyle.Body2">No idea description has been provided..</RadzenText>
+                    return;
+                }
+                
+                <RadzenText Style="margin: 0;">@_idea.Description</RadzenText>
+            </RadzenStack>
+        </RadzenCard>
+    </RadzenStack>
+    
+    @if (_comments == null)
+    {
+        <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" ShowValue="@false" />
+        return;
+    }
+    
+    <RadzenCard class="w-100">
+        <RadzenStack Gap="1rem" Orientation="Orientation.Vertical">
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                <RadzenText Style="margin: 0" TextStyle="TextStyle.Subtitle1">Communication</RadzenText>
+                <RadzenButton Text="Add comment" Icon="add_circle_outline" Click="@(() => AddComment())" />
+            </RadzenStack>
+            <RadzenStack Gap="1rem" Orientation="Orientation.Vertical">
+                @if (!_comments.Any())
+                {
+                    <RadzenText TextStyle="TextStyle.Body2">No comments have been added yet..</RadzenText>
+                    return;
+                }
+                
+                @foreach (var comment in _comments)
+                {
+                    <RadzenStack Orientation="Orientation.Vertical" Gap=".5rem">
+                        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap=".5rem">
+                                <RadzenText Style="margin: 0" TextStyle="TextStyle.Subtitle1">@comment.AuthorHandle</RadzenText>
+
+                                @* <RadzenButton Icon="reply" Size="ButtonSize.ExtraSmall" /> *@
+
+                                @{
+                                    var userId = _authState.User.Claims.FirstOrDefault(x => x.Type == "sub");
+
+                                    if (userId != null && userId.Value == comment.AuthorId)
+                                    {
+                                        <RadzenButton Click="@(() => DeleteComment(comment.Id))" Icon="delete" Size="ButtonSize.ExtraSmall"/>
+                                        <RadzenButton Click="@(() => EditComment(comment.Id))" Icon="edit" Size="ButtonSize.ExtraSmall"/>
+                                    }
+                                }
+                            </RadzenStack>
+                            <RadzenText Style="margin: 0;">@comment.CreatedAt.ToString("dd.MM.yyyy HH:mm")</RadzenText>
+                        </RadzenStack>
+
+                        <RadzenText>@comment.Content</RadzenText>
+                    </RadzenStack>
+                }
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public string? Id { get; set; }
+    
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
+    [Inject]
+    public HttpClient HttpClient { get; set; } = default!;
+
+    [Inject]
+    public NavigationManager NavigationManager { get; set; } = default!;
+
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
+    [Inject]
+    public AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+
+    private DTOs.IdeaFull? _idea = null;
+    private List<string>? _votes = null;
+    private AuthenticationState? _authState = null;
+    private string? _newIdeaTitle = null;
+    private string? _newIdeaDescription = null;
+    private List<Status>? _statuses = null;
+    private string? _tempStatusTitle = null;
+    private string? _ideaStatus = null;
+    private string? _tempCategoryTitle = null;
+    private string? _ideaCategory = null;
+    private List<Category>? _categories = null;
+    private List<DTOs.CommentDetails>? _comments = null;
+    private string? _tempCommentContent = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        
+        if (string.IsNullOrWhiteSpace(Id))
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Invalid idea id has been provided. Please try again later");
+            NavigationManager.NavigateTo("/");
+            return;
+        }
+
+        await FetchIdeaDetails();
+        await FetchStatuses();
+        await FetchCategories();
+        await FetchComments();
+    }
+
+    private async Task FetchComments()
+    {
+        if (_idea == null)
+            return;
+        
+        try
+        {
+            _comments = await HttpClient.GetFromJsonAsync<List<DTOs.CommentDetails>>($"Comments/qry_get_idea_comments/{_idea.Id}");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to fetch comments. Please try again later");
+        }
+    }
+    
+    private async Task FetchIdeaDetails()
+    {
+        try
+        {
+            _idea = await HttpClient.GetFromJsonAsync<DTOs.IdeaFull>($"Idea/qry_get_article_details/{Id}");
+
+            _votes = await HttpClient.GetFromJsonAsync<List<string>>("Idea/qry_get_user_upvotes");
+
+            if (_idea != null)
+            {
+                _newIdeaTitle = _idea.Title;
+                _newIdeaDescription = _idea.Description;
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to fetch idea details. Please try again later");
+        }
+    }
+
+    private async Task FetchStatuses()
+    {
+        try
+        {
+            _statuses = await HttpClient.GetFromJsonAsync<List<Status>>("Status/qry_get_all_statuses");
+
+            if (_statuses != null && _idea != null)
+            {
+                var ideaStatus = _statuses.FirstOrDefault(x => x.Title == _idea.Status);
+
+                if (ideaStatus != null)
+                {
+                    _tempStatusTitle = ideaStatus.Title;
+                    _ideaStatus = ideaStatus.Title;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to fetch status list. Please try again later");
+        }
+    }
+    
+    private async Task FetchCategories()
+    {
+        try
+        {
+            _categories = await HttpClient.GetFromJsonAsync<List<Category>>("Category/qry_get_all_categories");
+
+            if (_categories != null && _idea != null)
+            {
+                var ideaCategory = _categories.FirstOrDefault(x => x.Title == _idea.Category.Value);
+
+                if (ideaCategory != null)
+                {
+                    _tempCategoryTitle = ideaCategory.Title;
+                    _ideaCategory = ideaCategory.Title;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to fetch status list. Please try again later");
+        }
+    }
+    
+    private async Task UpvoteIdea(string ideaId)
+    {
+        try
+        {
+            await HttpClient.PostAsync($"Idea/cmd_upvote_idea/{ideaId}", null);
+
+            await FetchIdeaDetails();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Idea upvoted successfully");
+        }
+        catch (Exception e)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to upvote idea");
+            Console.WriteLine(e.Message);
+        }
+    }
+    
+    private async Task RemoveVote(string ideaId)
+    {
+        try
+        {
+            await HttpClient.PostAsync($"Idea/cmd_remove_vote/{ideaId}", null);
+
+            await FetchIdeaDetails();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Vote removed successfully");
+        }
+        catch (Exception e)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to remove vote from idea");
+            Console.WriteLine(e.Message);
+        }
+    }
+
+    private async Task DeleteIdea()
+    {
+        if (_idea == null)
+            return;
+        
+        var confirmation = await DialogService.Confirm("Are you sure that you want to delete this idea?", "Idea deletion confirmation", options: new ConfirmOptions()
+        {
+            CloseDialogOnEsc = true,
+            CloseDialogOnOverlayClick = true,
+            CancelButtonText = "Cancel",
+            OkButtonText = "Delete"
+        });
+
+        if (confirmation is null or false)
+            return;
+
+        try
+        {
+            await HttpClient.PostAsync($"Idea/cmd_delete_idea/{_idea.Id}", null);
+
+            NotificationService.Notify(NotificationSeverity.Success, "Idea deleted successfully");
+            
+            NavigationManager.NavigateTo("/");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to delete idea");
+        }
+    }
+
+    private async Task EditIdeaTitle()
+    {
+        if (_idea == null)
+            return;
+        
+        // show modal
+        var result = await DialogService.OpenAsync("Edit title", ds =>
+            @<RadzenStack Orientation="Orientation.Vertical">
+                <RadzenTextBox Placeholder="Title" Value="@_newIdeaTitle" bind-Value="@_newIdeaTitle" @oninput="@((e) => _newIdeaTitle = e.Value.ToString())" />
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
+                    <RadzenButton Text="Save" Icon="save" Click="() => ds.Close(true)" />
+                    <RadzenButton Text="Cancel" Icon="close" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light"/>
+        </RadzenStack>
+        </RadzenStack>);
+        
+        if (result is not bool or false)
+            return;
+
+        if (_newIdeaTitle == _idea.Title || _newIdeaTitle == null)
+            return;
+
+        try
+        {
+            var cmd = new Commands.SingleStringUpdateCommand(_newIdeaTitle);
+            
+            await HttpClient.PostAsJsonAsync($"Idea/cmd_update_title/{_idea.Id}", cmd);
+
+            await FetchIdeaDetails();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Idea title updated successfully");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to update idea title. Please try again later");
+        }
+    }
+    
+    private async Task EditIdeaDescription()
+    {
+        if (_idea == null)
+            return;
+        
+        // show modal
+        var result = await DialogService.OpenAsync("Edit description", ds =>
+            @<RadzenStack Orientation="Orientation.Vertical">
+                <RadzenTextArea Rows="5" Placeholder="Idea description" Value="@_newIdeaDescription" bind-Value="@_newIdeaDescription" @oninput="@((e) => _newIdeaDescription = e.Value.ToString())" />
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
+                    <RadzenButton Text="Save" Icon="save" Click="() => ds.Close(true)" />
+                    <RadzenButton Text="Cancel" Icon="close" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light"/>
+        </RadzenStack>
+        </RadzenStack>);
+        
+        if (result is not bool or false)
+            return;
+
+        if (_newIdeaDescription == _idea.Description || _newIdeaDescription == null)
+            return;
+
+        try
+        {
+            var cmd = new Commands.SingleStringUpdateCommand(_newIdeaDescription);
+            
+            await HttpClient.PostAsJsonAsync($"Idea/cmd_update_description/{_idea.Id}", cmd);
+
+            await FetchIdeaDetails();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Idea description updated successfully");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to update idea description. Please try again later");
+        }
+    }
+
+    private async Task EditIdeaStatus()
+    {
+        if (_idea == null || _statuses == null)
+            return;
+        
+        // show modal
+        var result = await DialogService.OpenAsync("Edit status", ds =>
+            @<RadzenStack Orientation="Orientation.Vertical">
+                <RadzenDropDown @bind-Value="@_tempStatusTitle" Data="@_statuses.Select(x => x.Title)" />
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
+                    <RadzenButton Text="Save" Icon="save" Click="() => ds.Close(true)"/>
+                    <RadzenButton Text="Cancel" Icon="close" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light"/>
+        </RadzenStack>
+        </RadzenStack>);
+        
+        if (result is not bool or false)
+            return;
+
+        if (_tempStatusTitle == null)
+            return;
+
+        try
+        {
+            var status = _statuses.FirstOrDefault(x => x.Title == _tempStatusTitle);
+
+            if (status == null)
+                return;
+            
+            var cmd = new Commands.UpdateIdeaStatusCommand(status.Id);
+            
+            await HttpClient.PostAsJsonAsync($"Idea/cmd_update_status/{_idea.Id}", cmd);
+
+            await FetchIdeaDetails();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Status updated successfully");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to update status. Please try again later");
+        }
+    }
+    
+    private async Task EditIdeaCategory()
+    {
+        if (_idea == null || _categories == null)
+            return;
+        
+        // show modal
+        var result = await DialogService.OpenAsync("Edit category", ds =>
+            @<RadzenStack Orientation="Orientation.Vertical">
+                <RadzenDropDown @bind-Value="@_tempCategoryTitle" Data="@_categories.Select(x => x.Title)" />
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
+                    <RadzenButton Text="Save" Icon="save" Click="() => ds.Close(true)"/>
+                    <RadzenButton Text="Cancel" Icon="close" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light"/>
+        </RadzenStack>
+        </RadzenStack>);
+        
+        if (result is not bool or false)
+            return;
+
+        if (_tempCategoryTitle == null)
+            return;
+
+        try
+        {
+            var category = _categories.FirstOrDefault(x => x.Title == _tempCategoryTitle);
+
+            if (category == null)
+                return;
+            
+            var cmd = new Commands.UpdateIdeaCategoryCommand(category.Id);
+            
+            await HttpClient.PostAsJsonAsync($"Idea/cmd_update_category/{_idea.Id}", cmd);
+
+            await FetchIdeaDetails();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Category updated successfully");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to update category. Please try again later");
+        }
+    }
+
+    private async Task DeleteComment(string commentId)
+    {
+        if (_idea == null)
+            return;
+        
+        var confirmation = await DialogService.Confirm("Are you sure that you want to delete this comment? Please note that this action is irreversible", "Idea comment deletion confirmation", options: new ConfirmOptions()
+        {
+            CloseDialogOnEsc = true,
+            CloseDialogOnOverlayClick = true,
+            CancelButtonText = "Cancel",
+            OkButtonText = "Delete"
+        });
+
+        if (confirmation is null or false)
+            return;
+
+        try
+        {
+            await HttpClient.PostAsync($"Comments/cmd_delete_comment/{commentId}", null);
+
+            NotificationService.Notify(NotificationSeverity.Success, "Comment deleted successfully");
+
+            await FetchComments();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to delete comment");
+        }
+    }
+
+    private async Task AddComment()
+    {
+        if (_comments == null || _idea == null)
+            return;
+        
+        // show modal
+        var result = await DialogService.OpenAsync("Add new comment", ds =>
+            @<RadzenStack Orientation="Orientation.Vertical">
+                <RadzenTextArea Rows="5" Placeholder="Content" Value="@_tempCommentContent" bind-Value="@_tempCommentContent" @oninput="@((e) => _tempCommentContent = e.Value.ToString())" />
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
+                    <RadzenButton Text="Add" Icon="add_circle_outline" Click="() => ds.Close(true)" />
+                    <RadzenButton Text="Cancel" Icon="close" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light"/>
+        </RadzenStack>
+        </RadzenStack>);
+        
+        if (result is not bool or false)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_tempCommentContent))
+            return;
+
+        try
+        {
+            var cmd = new Commands.AddCommentCommand(_idea.Id, _tempCommentContent, null);
+            
+            await HttpClient.PostAsJsonAsync("Comments/cmd_add_comment", cmd);
+
+            await FetchComments();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Comment added successfully");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to add comment. Please try again later");
+        }
+        
+        _tempCommentContent = null;
+    }
+
+    private async Task EditComment(string commentId)
+    {
+        if (_comments == null || _idea == null)
+            return;
+
+        var comment = _comments.FirstOrDefault(x => x.Id == commentId);
+
+        if (comment == null)
+            return;
+
+        _tempCommentContent = comment.Content;
+        
+        // show modal
+        var result = await DialogService.OpenAsync("Edit comment", ds =>
+            @<RadzenStack Orientation="Orientation.Vertical">
+                <RadzenTextArea Rows="5" Placeholder="Content" Value="@_tempCommentContent" bind-Value="@_tempCommentContent" @oninput="@((e) => _tempCommentContent = e.Value.ToString())" />
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
+                    <RadzenButton Text="Save" Icon="save" Click="() => ds.Close(true)" />
+                    <RadzenButton Text="Cancel" Icon="close" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light"/>
+        </RadzenStack>
+        </RadzenStack>);
+        
+        if (result is not bool or false)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_tempCommentContent))
+            return;
+
+        try
+        {
+            var cmd = new Commands.SingleStringUpdateCommand(_tempCommentContent);
+            
+            await HttpClient.PostAsJsonAsync($"Comments/cmd_update_comment_content/{commentId}", cmd);
+
+            await FetchComments();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Comment updated successfully");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to update comment. Please try again later");
+        }
+        
+        _tempCommentContent = null;
+    }
+}

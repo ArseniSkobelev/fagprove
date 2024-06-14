@@ -1,0 +1,15 @@
+@if (string.IsNullOrWhiteSpace(ItemContext.Path))
+{
+    <RadzenBadge IsPill Text="@ItemContext.Text" />
+}
+else
+{
+    <RadzenLink Path="@ItemContext.Path">
+        <RadzenBadge IsPill Text="@ItemContext.Text" Style="display:flex;" />
+    </RadzenLink>
+}
+
+@code {
+    [Parameter]
+    public RadzenBreadCrumbItem ItemContext { get; set; }
+}

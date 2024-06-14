@@ -1,0 +1,41 @@
+<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+    <RadzenText>Here you are able to observe all of the categories where you are defined as the owner</RadzenText>
+    
+    @if (_categories == null)
+    {
+        <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" ShowValue="@false"/>
+        return;
+    }
+    
+    @if (!_categories.Any())
+    {
+        <RadzenText TextStyle="TextStyle.Body2">You are not defined as an owner of any categories yet..</RadzenText>
+        return;
+    }
+
+    <ol style="margin: 0">
+        @foreach (var category in _categories)
+        {
+            <li><RadzenText>@category.Title</RadzenText></li>
+        }
+    </ol>
+</RadzenStack>
+
+@code {
+    [Inject] 
+    public HttpClient HttpClient { get; set; } = default!;
+
+    private List<Category>? _categories = null;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _categories = await HttpClient.GetFromJsonAsync<List<Category>>("Category/qry_get_user_owned_categories");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+}

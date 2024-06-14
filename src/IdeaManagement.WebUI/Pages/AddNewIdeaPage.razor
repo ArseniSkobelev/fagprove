@@ -1,0 +1,139 @@
+@page "/add"
+@using IdeaManagement.Shared.DTOs
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+    <RadzenBreadCrumb>
+        <Template Context="item">
+            <IdeaBreadCrumbTemplate ItemContext="item" />
+        </Template>
+        <ChildContent>
+            <RadzenBreadCrumbItem Text="Ideas" />
+            <RadzenBreadCrumbItem Path="/add" Text="Add new idea" />
+        </ChildContent>
+    </RadzenBreadCrumb>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+        <RadzenText TextStyle="TextStyle.H5" Style="margin: 0">Add new idea</RadzenText>
+    </RadzenStack>
+
+    <RadzenCard>
+        <RadzenText>Please fill out this form and click the "Add idea" button below to add an idea to the repository. Please note that the title and category is required for a new idea</RadzenText>
+    </RadzenCard>
+
+    @if (_categories == null)
+    {
+        <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" ShowValue="@false" />
+        return;
+    }
+    
+    @if (!_categories.Any())
+    {
+        <RadzenText>No categories have yet been added. Please contact your administrator to resolve this issue.</RadzenText>
+        return;
+    }
+
+    <RadzenStack Orientation="Orientation.Vertical" Gap="1">
+        <RadzenStack Orientation="Orientation.Horizontal" Gap=".25rem" AlignItems="AlignItems.Center">
+            <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Idea title</RadzenText>
+            <RadzenText Style="font-size: 1.25rem; color: var(--rz-danger-light)">*</RadzenText>
+        </RadzenStack>
+        <RadzenTextBox @oninput="@((e) => _ideaTitle = e.Value.ToString())" Placeholder="e.g. Develop a new tool for managing ideas" />
+    </RadzenStack>
+
+    <RadzenStack Orientation="Orientation.Vertical" Gap="1">
+        <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Idea description</RadzenText>
+        <RadzenTextArea Rows="5" @oninput="@((e) => _ideaDescription = e.Value.ToString())" Placeholder="e.g. Developing a custom tool for managing ideas will help us save money on licensing costs over using a SaaS" />
+    </RadzenStack>
+
+    <RadzenStack Orientation="Orientation.Vertical" Gap="1">
+        <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Idea category</RadzenText>
+        <RadzenDropDown @bind-Value="@_categoryName" Data="@_categories.Select(x => x.Title)" />
+    </RadzenStack>
+    
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+        <RadzenButton Click="@AddIdea" Text="Add idea" Icon="add_circle_outline" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Inject] 
+    public HttpClient HttpClient { get; set; } = default!;
+    
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
+    [Inject]
+    public NavigationManager NavigationManager { get; set; } = default!;
+
+    private string? _categoryName;
+    private string? _ideaTitle;
+    private string? _ideaDescription;
+
+    private List<Category>? _categories;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _categories = await HttpClient.GetFromJsonAsync<List<Category>>("Category/qry_get_all_categories");
+
+            if (_categories != null && _categories.Count > 0)
+            {
+                _categoryName = _categories.First().Title;
+            }
+        }
+        catch (Exception e)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to fetch categories");
+        }
+    }
+
+    private async Task AddIdea()
+    {
+        if (string.IsNullOrWhiteSpace(_ideaTitle))
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Idea title can't be empty");
+            return;
+        }
+
+        if (_categories == null)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "No categories have been found");
+            return;
+        }
+        
+        var confirmation = await DialogService.Confirm("Are you sure that you want to add this idea to the repository?", "Idea confirmation", options: new ConfirmOptions()
+        {
+            CloseDialogOnOverlayClick = true,
+            CloseDialogOnEsc = true,
+            CancelButtonText = "Cancel",
+            OkButtonText = "Add"
+        });
+
+        if (confirmation is null or false)
+            return;
+
+        var category = _categories.FirstOrDefault(x => x.Title == _categoryName);
+
+        if (category == null)
+            return;
+
+        var cmd = new Commands.CreateIdeaCommand(_ideaTitle, _ideaDescription, category.Id);
+
+        try
+        {
+            await HttpClient.PostAsJsonAsync("Idea/cmd_create_idea", cmd);
+
+            NotificationService.Notify(NotificationSeverity.Success, "Idea added successfully");
+            
+            NavigationManager.NavigateTo("/");
+        }
+        catch (Exception e)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to add idea");
+        }
+    }
+}

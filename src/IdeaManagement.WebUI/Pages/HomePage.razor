@@ -1,9 +1,128 @@
 ﻿@page "/"
-@using Microsoft.AspNetCore.Authorization
-@attribute [Authorize]
+@attribute [Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner},{Roles.IdeaContributor}")]
+@inject NavigationManager NavigationManager
 
-<PageTitle>Home</PageTitle>
+<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+    <RadzenBreadCrumb>
+        <Template Context="item">
+            <IdeaBreadCrumbTemplate ItemContext="item" />
+        </Template>
+        <ChildContent>
+            <RadzenBreadCrumbItem Text="Ideas" />
+            <RadzenBreadCrumbItem Path="/" Text="List" />
+        </ChildContent>
+    </RadzenBreadCrumb>
 
-<h1>Hello, world!</h1>
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+        <RadzenText TextStyle="TextStyle.H5" Style="margin: 0">Ideas list</RadzenText>
+        <RadzenButton Text="Add new idea" Icon="add_circle_outline" Click="@(() => NavigationManager.NavigateTo("/add"))" />
+    </RadzenStack>
 
-Welcome to your new app.
+    <RadzenCard>
+        <RadzenText>This page is displaying all of the previously stored ideas. Click on the idea title to go to the details page.</RadzenText>
+    </RadzenCard>
+
+    @if (_ideas == null || _votes == null)
+    {
+        <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" ShowValue="@false" />
+        return;
+    }
+    
+    @if (!_ideas.Any())
+    {
+        <RadzenText TextStyle="TextStyle.Body2">No ideas have been found..</RadzenText>
+        return;
+    }
+
+    <RadzenDataGrid FilterCaseSensitivity="@FilterCaseSensitivity.CaseInsensitive" TItem="@DTOs.IdeaSlim" Data="@_ideas" PageSize="10" AllowSorting AllowPaging AllowFiltering>
+        <Columns>
+            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="Title" Title="Idea title">
+                <Template>
+                    <RadzenLink Text="@context.Title" Path="@($"/idea/{context.Id}")" />
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="Status" Title="Status"></RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="Upvotes" Title="Upvotes"></RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="Category" Title="Category"></RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim">
+                <Template>
+                    <RadzenButton IsBusy="@_voting" Icon="@(_votes.FirstOrDefault(x => x == context.Id) != null ? "thumb_down" : "thumb_up")" Text="@(_votes.FirstOrDefault(x => x == context.Id) != null ? "Remove vote" : "Upvote")" Style="width: 100%" Click="@(_votes.FirstOrDefault(x => x == context.Id) != null ? () => RemoveVote(context.Id) : () => UpvoteIdea(context.Id))" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</RadzenStack>
+
+@code {
+    [Inject] 
+    public HttpClient HttpClient { get; set; } = default!;
+    
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+    
+    private List<DTOs.IdeaSlim>? _ideas = null;
+    private List<string>? _votes = null;
+    private bool _voting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchIdeas();
+    }
+
+    private async Task FetchIdeas()
+    {
+        try
+        {
+            _ideas = await HttpClient.GetFromJsonAsync<List<DTOs.IdeaSlim>>("Idea/qry_get_all_ideas");
+
+            _votes = await HttpClient.GetFromJsonAsync<List<string>>("Idea/qry_get_user_upvotes");
+        }
+        catch (Exception e)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to fetch ideas");
+            Console.WriteLine(e.Message);
+        }
+    }
+
+    private async Task UpvoteIdea(string ideaId)
+    {
+        _voting = true;
+        
+        try
+        {
+            await HttpClient.PostAsync($"Idea/cmd_upvote_idea/{ideaId}", null);
+
+            await FetchIdeas();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Idea upvoted successfully");
+        }
+        catch (Exception e)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to upvote idea");
+            Console.WriteLine(e.Message);
+        }
+
+        _voting = false;
+    }
+    
+    private async Task RemoveVote(string ideaId)
+    {
+        _voting = true;
+        
+        try
+        {
+            await HttpClient.PostAsync($"Idea/cmd_remove_vote/{ideaId}", null);
+
+            await FetchIdeas();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "Vote removed successfully");
+        }
+        catch (Exception e)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to remove vote from idea");
+            Console.WriteLine(e.Message);
+        }
+
+        _voting = false;
+    }
+}

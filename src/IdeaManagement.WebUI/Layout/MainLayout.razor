@@ -1,4 +1,6 @@
-﻿@inherits LayoutComponentBase
+﻿@using IdeaManagement.Shared
+@inherits LayoutComponentBase
+
 
 <RadzenComponents />
 
@@ -10,15 +12,31 @@
         </RadzenStack>
     </RadzenHeader>
     <RadzenSidebar @bind-Expanded="@_sidebarExpanded">
-        <RadzenStack Orientation="Orientation.Vertical">
+        <RadzenStack Orientation="Orientation.Vertical" Gap="0">
             <RadzenText TextStyle="TextStyle.H6" Style="color: var(--bs-white); padding: 1rem; text-align: center; font-weight: 600">Idea management software</RadzenText>
-            <AuthorizeView>
+            <AuthorizeView Context="auth_context_one" Roles="@($"{Roles.Administrator},{Roles.CategoryOwner},{Roles.IdeaContributor}")">
+                <ChildContent>
+                    <RadzenPanelMenu>
+                        <RadzenPanelMenuItem Text="Ideas" Icon="lightbulb" Expanded="@true">
+                            <RadzenPanelMenuItem Text="List" Icon="list_alt" Path="/"/>
+                            <AuthorizeView Context="item">
+                                <RadzenPanelMenuItem Text="Add new idea" Icon="add_circle_outline" Path="/add"/>
+                            </AuthorizeView>
+                        </RadzenPanelMenuItem>
+                    </RadzenPanelMenu>
+                </ChildContent>
+            </AuthorizeView>
+            <AuthorizeView Context="auth_context_two" Roles="@Roles.Administrator">
                 <RadzenPanelMenu>
-                    <RadzenPanelMenuItem Text="Ideas" Icon="lightbulb" @bind-Expanded="@_ideasMenuItemExpanded">
-                        <RadzenPanelMenuItem Text="List" Icon="list_alt" Path="/"/>
-                        <AuthorizeView Context="item">
-                            <RadzenPanelMenuItem Text="Add new idea" Icon="add_circle_outline" Path="/add"/>
-                        </AuthorizeView>
+                    <RadzenPanelMenuItem Text="Categories" Icon="category" Expanded="@true">
+                        <RadzenPanelMenuItem Text="List" Icon="list_alt" Path="/categories"/>
+                    </RadzenPanelMenuItem>
+                </RadzenPanelMenu>
+            </AuthorizeView>
+            <AuthorizeView Context="auth_context_three" Roles="@Roles.Administrator">
+                <RadzenPanelMenu>
+                    <RadzenPanelMenuItem Text="Statuses" Icon="flag" Expanded="@true">
+                        <RadzenPanelMenuItem Text="List" Icon="list_alt" Path="/statuses"/>
                     </RadzenPanelMenuItem>
                 </RadzenPanelMenu>
             </AuthorizeView>

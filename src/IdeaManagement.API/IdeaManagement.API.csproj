@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Auth0.ManagementApi" Version="7.26.2" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.6" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.6"/>
         <PackageReference Include="MongoDB.Driver" Version="2.25.0" />
@@ -26,11 +27,5 @@
       <ProjectReference Include="..\IdeaManagement.Shared\IdeaManagement.Shared.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Controllers\" />
-      <Folder Include="Hubs\" />
-      <Folder Include="Repositories\" />
-      <Folder Include="Services\" />
-    </ItemGroup>
 
 </Project>
