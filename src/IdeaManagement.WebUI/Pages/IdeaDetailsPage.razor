@@ -76,7 +76,7 @@
                 <RadzenStack Orientation="Orientation.Horizontal" Gap=".5rem">
                     <RadzenText Style="margin: 0;" TextStyle="TextStyle.Subtitle1">Idea status</RadzenText>
                     <RadzenText Style="margin: 0;">@_idea.Status</RadzenText>
-                    <AuthorizeView Roles="@Roles.Administrator">
+                    <AuthorizeView Roles="@($"{Roles.Administrator},{Roles.CategoryOwner}")">
                         <RadzenButton Click="@EditIdeaStatus" Icon="edit" Size="ButtonSize.ExtraSmall" />
                     </AuthorizeView>
                     <AuthorizeView Roles="@Roles.CategoryOwner">
@@ -95,7 +95,7 @@
                 @{
                     var userId = _authState.User.Claims.FirstOrDefault(x => x.Type == "sub");
 
-                    if (userId != null && userId.Value == _idea.Author.Key)
+                    if (userId != null && userId.Value == _idea.Author.Key || _authState.User.IsInRole(Roles.CategoryOwner))
                     {
                         <RadzenButton Click="@EditIdeaCategory" Icon="edit" Size="ButtonSize.ExtraSmall" />
                     }
@@ -546,7 +546,7 @@
         if (result is not bool or false)
             return;
 
-        if (_tempCategoryTitle == _ideaCategory || _tempCategoryTitle == null)
+        if (_tempCategoryTitle == null)
             return;
 
         try

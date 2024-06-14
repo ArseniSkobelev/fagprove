@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Auth0.ManagementApi.Models;
 using IdeaManagement.API.Extensions;
 using IdeaManagement.API.Hubs;
 using IdeaManagement.API.Repositories;
@@ -237,7 +238,8 @@ public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRe
             return Problem();
         }
     }
-    
+
+    [Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner}")]
     [HttpPost("cmd_update_category/{ideaId}")]
     public async Task<IActionResult> UpdateIdeaCategoryCommandHandler(string ideaId, [FromBody] Commands.UpdateIdeaCategoryCommand cmd)
     {
