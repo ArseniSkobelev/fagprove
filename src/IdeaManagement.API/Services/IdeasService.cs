@@ -1,12 +1,14 @@
+using IdeaManagement.API.Hubs;
 using IdeaManagement.API.Repositories;
 using IdeaManagement.Shared;
 using IdeaManagement.Shared.DTOs;
 using IdeaManagement.Shared.Entities;
 using IdeaManagement.Shared.Exceptions;
+using Microsoft.AspNetCore.SignalR;
 
 namespace IdeaManagement.API.Services;
 
-public class IdeasService(IIdeasRepository ideasRepository, IStatusRepository statusRepository, ICategoryRepository categoryRepository) : IIdeasService
+public class IdeasService(IIdeasRepository ideasRepository, IStatusRepository statusRepository, ICategoryRepository categoryRepository, IHubContext<IdeaHub> ideaHub) : IIdeasService
 {
     public async Task CreateIdea(string title, string? description, string authorId, string authorHandle, string categoryId)
     {
@@ -15,6 +17,8 @@ public class IdeasService(IIdeasRepository ideasRepository, IStatusRepository st
         var newIdeaStatus = statusRepository.GetStatusByTitle(Constants.DefaultStatuses.NewIdea);
 
         await ideasRepository.CreateIdea(title, description, authorId, authorHandle, newIdeaStatus.Id, categoryId);
+
+        await ideaHub.Clients.All.SendAsync(SignalR.Methods.NewIdeaAdded, authorHandle, title);
     }
 
     public List<DTOs.IdeaSlim> GetAllIdeas() => ideasRepository.GetAllIdeas();
@@ -54,11 +58,14 @@ public class IdeasService(IIdeasRepository ideasRepository, IStatusRepository st
     public async Task UpdateIdeaStatus(string ideaId, string userId, string cmdStatusId)
     {
         var status = statusRepository.GetStatusById(cmdStatusId);
+        var idea = ideasRepository.GetIdeaDetails(ideaId);
 
         if (status == null)
             throw new DatabaseExceptions.DocumentNotFoundException("Status not found");
 
         await ideasRepository.UpdateIdeaStatus(ideaId, cmdStatusId);
+        
+        await ideaHub.Clients.All.SendAsync(SignalR.Methods.IdeaStatusChanged, ideaId, status.Title, idea.Title);
     }
 
     public async Task UpdateIdeaCategory(string ideaId, string userId, string cmdCategoryId)

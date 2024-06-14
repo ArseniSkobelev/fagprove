@@ -22,10 +22,19 @@ public static class DTOs
         DateTime CreatedAt,
         string Status,
         int Upvotes,
-        string Category);
+        KeyValuePair<string, string> Category);
 
     public record ApplicationUser(
         string UserId,
         string Name,
-        string Email);
+        string Email,
+        string Role);
+
+    public record CommentDetails(
+        string Id,
+        string Content,
+        string AuthorHandle,
+        string? RepliesToCommentId,
+        DateTime CreatedAt,
+        string AuthorId);
 }

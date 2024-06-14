@@ -19,7 +19,7 @@
     </RadzenStack>
 
     <RadzenCard>
-        <RadzenText>This page is displaying all of the previously stored ideas</RadzenText>
+        <RadzenText>This page is displaying all of the previously stored ideas. Click on the idea title to go to the details page.</RadzenText>
     </RadzenCard>
 
     @if (_ideas == null || _votes == null)
@@ -41,13 +41,12 @@
                     <RadzenLink Text="@context.Title" Path="@($"/idea/{context.Id}")" />
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="AuthorHandle" Title="Author name"></RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="Status" Title="Status"></RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Width="120px" Property="Upvotes" Title="Upvotes"></RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="Upvotes" Title="Upvotes"></RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="@DTOs.IdeaSlim" Property="Category" Title="Category"></RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="@DTOs.IdeaSlim">
                 <Template>
-                    <RadzenButton Icon="@(_votes.FirstOrDefault(x => x == context.Id) != null ? "thumb_down" : "thumb_up")" Text="@(_votes.FirstOrDefault(x => x == context.Id) != null ? "Remove vote" : "Upvote")" Style="width: 100%" Click="@(_votes.FirstOrDefault(x => x == context.Id) != null ? () => RemoveVote(context.Id) : () => UpvoteIdea(context.Id))" />
+                    <RadzenButton IsBusy="@_voting" Icon="@(_votes.FirstOrDefault(x => x == context.Id) != null ? "thumb_down" : "thumb_up")" Text="@(_votes.FirstOrDefault(x => x == context.Id) != null ? "Remove vote" : "Upvote")" Style="width: 100%" Click="@(_votes.FirstOrDefault(x => x == context.Id) != null ? () => RemoveVote(context.Id) : () => UpvoteIdea(context.Id))" />
                 </Template>
             </RadzenDataGridColumn>
         </Columns>
@@ -61,8 +60,9 @@
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
     
-    private List<DTOs.IdeaSlim>? _ideas { get; set; } = null;
-    private List<string>? _votes { get; set; } = null;
+    private List<DTOs.IdeaSlim>? _ideas = null;
+    private List<string>? _votes = null;
+    private bool _voting = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -86,6 +86,8 @@
 
     private async Task UpvoteIdea(string ideaId)
     {
+        _voting = true;
+        
         try
         {
             await HttpClient.PostAsync($"Idea/cmd_upvote_idea/{ideaId}", null);
@@ -99,10 +101,14 @@
             NotificationService.Notify(NotificationSeverity.Error, "Unable to upvote idea");
             Console.WriteLine(e.Message);
         }
+
+        _voting = false;
     }
     
     private async Task RemoveVote(string ideaId)
     {
+        _voting = true;
+        
         try
         {
             await HttpClient.PostAsync($"Idea/cmd_remove_vote/{ideaId}", null);
@@ -116,5 +122,7 @@
             NotificationService.Notify(NotificationSeverity.Error, "Unable to remove vote from idea");
             Console.WriteLine(e.Message);
         }
+
+        _voting = false;
     }
 }

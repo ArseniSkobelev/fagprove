@@ -204,7 +204,7 @@
                 </RadzenStack>
                 <RadzenStack Orientation="Orientation.Vertical" Gap=".25rem">
                     <RadzenText>Category owner</RadzenText>
-                    <RadzenDropDown @bind-Value="@_tempUserEmail" Data="@_users.Select(x => x.Email)" />
+                    <RadzenDropDown @bind-Value="@_tempUserEmail" Data="@_users.Where(x => x.Role == Roles.CategoryOwner).Select(x => x.Email)" />
                 </RadzenStack>
                 <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
                     <RadzenButton Text="Save" Icon="save" Click="() => ds.Close(true)" />
@@ -259,5 +259,6 @@
         }
         
         _tempCategoryTitle = null;
+        _tempUserEmail = null;
     }
 }

@@ -1,17 +1,18 @@
 @using System.Security.Claims
+@using IdeaManagement.WebUI.Modals
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 
 @inject NavigationManager Navigation
 @inject SignOutSessionStateManager SignOutManager
 
 <RadzenStack Orientation="Orientation.Horizontal" Gap="16" AlignItems="AlignItems.Center">
-    <AuthorizeView>
+    <AuthorizeView Context="UserProfileContext">
         <Authorized>
             <RadzenProfileMenu>
                 <Template>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
                         @{
-                            var imageClaim = context.User.Claims.FirstOrDefault(x => x.Type == "picture");
+                            var imageClaim = UserProfileContext.User.Claims.FirstOrDefault(x => x.Type == "picture");
 
                             if (imageClaim != null)
                             {
@@ -20,11 +21,11 @@
                         }
 
                         <RadzenStack Orientation="Orientation.Vertical" Gap="0" Style="padding-right: 1rem">
-                            @if (context.User.Identity != null)
+                            @if (UserProfileContext.User.Identity != null)
                             {
-                                <RadzenText Style="margin: 0; font-weight: 600;">@context.User.Identity.Name</RadzenText>
+                                <RadzenText Style="margin: 0; font-weight: 600;">@UserProfileContext.User.Identity.Name</RadzenText>
 
-                                var roleClaim = context.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role);
+                                var roleClaim = UserProfileContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role);
 
                                 if (roleClaim != null)
                                 {
@@ -36,6 +37,9 @@
                 </Template>
                 <ChildContent>
                     <RadzenStack class="rz-p-2" Gap=".5rem">
+                        <AuthorizeView Roles="@Roles.CategoryOwner">
+                            <RadzenButton Text="Owned categories" Icon="categories" Click="@ShowUserOwnedCategoriesModal" />
+                        </AuthorizeView>
                         <RadzenButton Text="Sign out" Icon="logout" Click="@NavigateToSignOut" />
                     </RadzenStack>
                 </ChildContent>
@@ -56,6 +60,12 @@
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
+    [Inject] 
+    public AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
     private void NavigateToLogin()
     {
         Navigation.NavigateTo("authentication/login");
@@ -65,5 +75,10 @@
     {
         await SignOutManager.SetSignOutState();
         Navigation.NavigateTo("authentication/logout");
+    }
+
+    private async Task ShowUserOwnedCategoriesModal()
+    {
+        await DialogService.OpenAsync<UserOwnedCategoriesModal>("Owned categories");
     }
 }

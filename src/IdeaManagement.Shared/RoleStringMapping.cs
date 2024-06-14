@@ -6,9 +6,9 @@ public static class RoleStringMapping
     {
         return roleName switch
         {
-            "administrator" => "Administrator",
-            "idea_contributor" => "Idea contributor",
-            "category_owner" => "Category owner",
+            Roles.Administrator => "Administrator",
+            Roles.IdeaContributor => "Idea contributor",
+            Roles.CategoryOwner => "Category owner",
             _ => "Unknown"
         };
     }

@@ -17,7 +17,7 @@
     </RadzenStack>
 
     <RadzenCard>
-        <RadzenText>This page is displaying all of the previously added statuses</RadzenText>
+        <RadzenText>This page is displaying all of the previously added statuses. Please mind that you are unable to delete predefined statuses.</RadzenText>
     </RadzenCard>
 
     @if (_statuses == null)
@@ -31,7 +31,7 @@
             <RadzenDataGridColumn TItem="@Status" Property="Title" Title="Status title"></RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="@Status">
                 <Template>
-                    <RadzenButton Style="width: 100%" Text="Delete status" ButtonStyle="ButtonStyle.Danger" Click="@(() => DeleteStatus(context.Id))" />
+                    <RadzenButton Style="width: 100%" Text="Delete status" ButtonStyle="ButtonStyle.Danger" Click="@(() => DeleteStatus(context.Id))" Disabled="@(DefaultStatuses.StatusTitles.Contains(context.Title))" />
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="@Status">

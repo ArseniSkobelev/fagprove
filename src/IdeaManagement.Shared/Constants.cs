@@ -8,11 +8,13 @@ public static class Constants
         public const string Status = "status";
         public const string Categories = "categories";
         public const string Votes = "votes";
+        public const string Comments = "comments";
     }
 
     public static class SignalRHubs
     {
         public const string Base = "/hubs";
+        public const string Ideas = $"{Base}/ideas";
     }
 
     public static class DefaultStatuses

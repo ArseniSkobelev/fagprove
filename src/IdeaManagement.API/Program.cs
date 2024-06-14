@@ -1,4 +1,5 @@
 using IdeaManagement.API.Domain.Database;
+using IdeaManagement.API.Hubs;
 using IdeaManagement.API.Repositories;
 using IdeaManagement.API.Services;
 using IdeaManagement.Shared;
@@ -105,6 +106,8 @@ var builder = WebApplication.CreateBuilder(args);
     builder.Services.AddScoped<IIdeasRepository, IdeasRepository>();
     builder.Services.AddScoped<IIdeasService, IdeasService>();
     builder.Services.AddScoped<IAuth0Service, Auth0Service>();
+    builder.Services.AddScoped<ICommentRepository, CommentRepository>();
+    // builder.Services.AddScoped<ICommentService, CommentService>();
 
     // add mongodb to di container
     builder.Services.AddSingleton(new MongoClient(new MongoUrl(builder.Configuration["mongodb_connection_string"] ?? throw new Exception("No MongoDB connection string found"))).GetDatabase("IdeaManagement"));
@@ -136,6 +139,7 @@ var app = builder.Build();
     app.UseHttpsRedirection();
 
     // map signalr hubs
+    app.MapHub<IdeaHub>(Constants.SignalRHubs.Ideas);
     
     app.Run();
 }

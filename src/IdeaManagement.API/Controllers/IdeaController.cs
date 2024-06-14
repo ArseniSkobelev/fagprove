@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using IdeaManagement.API.Extensions;
+using IdeaManagement.API.Hubs;
 using IdeaManagement.API.Repositories;
 using IdeaManagement.API.Services;
 using IdeaManagement.Shared;
@@ -8,12 +9,13 @@ using IdeaManagement.Shared.Entities;
 using IdeaManagement.Shared.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace IdeaManagement.API.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class IdeaController(IIdeasService _ideasService, IIdeasRepository ideasRepository) : ControllerBase
+public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRepository) : ControllerBase
 {
     [Authorize(Roles = $"{Roles.IdeaContributor},{Roles.Administrator},{Roles.CategoryOwner}")]
     [HttpPost("cmd_create_idea")]
@@ -36,7 +38,7 @@ public class IdeaController(IIdeasService _ideasService, IIdeasRepository ideasR
                 ? $"{fName.Value} {sName.Value}"
                 : email?.Value ?? "Unknown";
 
-            await _ideasService
+            await ideasService
                 .CreateIdea(cmd.Title, cmd.Description, userId, authorHandle, cmd.CategoryId);
 
             return Ok();
@@ -56,7 +58,7 @@ public class IdeaController(IIdeasService _ideasService, IIdeasRepository ideasR
     [HttpGet("qry_get_all_ideas")]
     public IActionResult GetAllIdeas()
     {
-        var ideas = _ideasService.GetAllIdeas();
+        var ideas = ideasService.GetAllIdeas();
 
         return Ok(ideas);
     }
@@ -71,7 +73,7 @@ public class IdeaController(IIdeasService _ideasService, IIdeasRepository ideasR
             if (string.IsNullOrWhiteSpace(userId))
                 return Unauthorized();
 
-            await _ideasService.DeleteIdea(ideaId, userId);
+            await ideasService.DeleteIdea(ideaId, userId);
             return Ok();
         }
         catch (UnauthorizedAccessException e)
@@ -153,7 +155,7 @@ public class IdeaController(IIdeasService _ideasService, IIdeasRepository ideasR
     {
         try
         {
-            var idea = _ideasService.GetIdeaDetails(ideaId);
+            var idea = ideasService.GetIdeaDetails(ideaId);
             return Ok(idea);
         }
         catch (DatabaseExceptions.DocumentNotFoundException e)
@@ -177,7 +179,7 @@ public class IdeaController(IIdeasService _ideasService, IIdeasRepository ideasR
             if (userId == null)
                 return Unauthorized();
 
-            await _ideasService.UpdateIdeaTitle(ideaId, userId, cmd.NewValue);
+            await ideasService.UpdateIdeaTitle(ideaId, userId, cmd.NewValue);
 
             return Ok();
         }
@@ -198,7 +200,7 @@ public class IdeaController(IIdeasService _ideasService, IIdeasRepository ideasR
             if (userId == null)
                 return Unauthorized();
 
-            await _ideasService.UpdateIdeaDescription(ideaId, userId, cmd.NewValue);
+            await ideasService.UpdateIdeaDescription(ideaId, userId, cmd.NewValue);
 
             return Ok();
         }
@@ -209,6 +211,7 @@ public class IdeaController(IIdeasService _ideasService, IIdeasRepository ideasR
         }
     }
     
+    [Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner}")]
     [HttpPost("cmd_update_status/{ideaId}")]
     public async Task<IActionResult> UpdateIdeaStatusCommandHandler(string ideaId, [FromBody] Commands.UpdateIdeaStatusCommand cmd)
     {
@@ -219,7 +222,7 @@ public class IdeaController(IIdeasService _ideasService, IIdeasRepository ideasR
             if (userId == null)
                 return Unauthorized();
 
-            await _ideasService.UpdateIdeaStatus(ideaId, userId, cmd.StatusId);
+            await ideasService.UpdateIdeaStatus(ideaId, userId, cmd.StatusId);
 
             return Ok();
         }
@@ -245,7 +248,7 @@ public class IdeaController(IIdeasService _ideasService, IIdeasRepository ideasR
             if (userId == null)
                 return Unauthorized();
 
-            await _ideasService.UpdateIdeaCategory(ideaId, userId, cmd.CategoryId);
+            await ideasService.UpdateIdeaCategory(ideaId, userId, cmd.CategoryId);
 
             return Ok();
         }

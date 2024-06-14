@@ -1,6 +1,9 @@
 using IdeaManagement.API.Repositories;
 using IdeaManagement.Shared.DTOs;
 using IdeaManagement.Shared.Entities;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+using MongoDB.Driver.Linq;
 
 namespace IdeaManagement.API.Services;
 
@@ -23,4 +26,13 @@ public class CategoryService(ICategoryRepository categoryRepository) : ICategory
 
     public async Task UpdateCategoryOwner(string categoryId, string ownerId) =>
         await categoryRepository.UpdateCategoryOwner(categoryId, ownerId);
+
+    public List<Category> GetUserOwnedCategories(string userId)
+    {
+        var categories = categoryRepository.GetAllCategories();
+
+        var userOwnedCategories = categories.Where(x => x.OwnerId == userId).ToList();
+
+        return userOwnedCategories;
+    }
 }

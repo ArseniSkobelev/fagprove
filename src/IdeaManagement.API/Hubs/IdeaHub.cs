@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
+
 namespace IdeaManagement.API.Hubs;
 
-public class IdeaHub
+[Authorize]
+public class IdeaHub : Hub
 {
-    
 }

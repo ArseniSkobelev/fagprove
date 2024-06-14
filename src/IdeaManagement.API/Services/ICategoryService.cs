@@ -11,4 +11,5 @@ public interface ICategoryService
     public Task DeleteCategoryById(string categoryId);
     public Task UpdateCategoryTitleById(string categoryId, string newTitle);
     public Task UpdateCategoryOwner(string categoryId, string ownerId);
+    public List<Category> GetUserOwnedCategories(string userId);
 }

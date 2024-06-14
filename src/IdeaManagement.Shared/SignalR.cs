@@ -1,6 +1,11 @@
 namespace IdeaManagement.Shared;
 
-public class SignalR
+public static class SignalR
 {
-    
+    public static class Methods
+    {
+        public const string NewIdeaAdded = "NewIdeaAdded";
+        public const string NewCommentAdded = "NewCommentAdded";
+        public const string IdeaStatusChanged = "IdeaStatusChanged";
+    }
 }

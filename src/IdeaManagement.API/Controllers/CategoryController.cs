@@ -1,3 +1,4 @@
+using IdeaManagement.API.Extensions;
 using IdeaManagement.API.Services;
 using IdeaManagement.Shared;
 using IdeaManagement.Shared.DTOs;
@@ -48,5 +49,27 @@ public class CategoryController(ICategoryService categoryService) : ControllerBa
     {
         await categoryService.UpdateCategoryOwner(categoryId, cmd.OwnerId);
         return Ok();
+    }
+
+    [Authorize(Roles = Roles.CategoryOwner)]
+    [HttpGet("qry_get_user_owned_categories")]
+    public IActionResult GetUserOwnedCategories()
+    {
+        try
+        {
+            var userId = HttpContext.GetUserId();
+
+            if (userId == null)
+                return Unauthorized();
+
+            var userOwnedCategories = categoryService.GetUserOwnedCategories(userId);
+
+            return Ok(userOwnedCategories);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return Problem();
+        }
     }
 }

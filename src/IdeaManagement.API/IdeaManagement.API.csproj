@@ -27,8 +27,4 @@
       <ProjectReference Include="..\IdeaManagement.Shared\IdeaManagement.Shared.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Hubs\" />
-    </ItemGroup>
-
 </Project>

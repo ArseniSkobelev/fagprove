@@ -1,18 +1,24 @@
 <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
-    <RadzenCard>
-        <RadzenText>Here you are able to observe all of the categories where you are defined as the owner</RadzenText>
-    </RadzenCard>
+    <RadzenText>Here you are able to observe all of the categories where you are defined as the owner</RadzenText>
     
     @if (_categories == null)
     {
         <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" ShowValue="@false"/>
         return;
     }
-
-    @foreach (var category in _categories)
+    
+    @if (!_categories.Any())
     {
-
+        <RadzenText TextStyle="TextStyle.Body2">You are not defined as an owner of any categories yet..</RadzenText>
+        return;
     }
+
+    <ol style="margin: 0">
+        @foreach (var category in _categories)
+        {
+            <li><RadzenText>@category.Title</RadzenText></li>
+        }
+    </ol>
 </RadzenStack>
 
 @code {

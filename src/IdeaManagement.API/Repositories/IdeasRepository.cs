@@ -56,12 +56,14 @@ public class IdeasRepository(IMongoDatabase db, IStatusRepository statusReposito
             .FirstOrDefault(x => x.Id == ideaId) ?? throw new DatabaseExceptions.DocumentNotFoundException("Idea not found");
 
         var categoryTitle = "Unknown";
+        var categoryId = string.Empty;
         var statusTitle = "Unknown";
 
         try
         {
             var category = categoryRepository.FindCategoryById(idea.CategoryId);
             categoryTitle = category.Title;
+            categoryId = category.Id;
         }
         catch (DatabaseExceptions.DocumentNotFoundException e)
         {
@@ -79,7 +81,7 @@ public class IdeasRepository(IMongoDatabase db, IStatusRepository statusReposito
         }
 
         return new DTOs.IdeaFull(idea.Id, idea.Title, idea.Description, new (idea.AuthorId, idea.AuthorHandle), idea.LatestEditor,
-            idea.UpdatedAt, idea.CreatedAt, statusTitle, idea.Upvotes, categoryTitle);
+            idea.UpdatedAt, idea.CreatedAt, statusTitle, idea.Upvotes, new KeyValuePair<string, string>(categoryId, categoryTitle));
     }
 
     public async Task CreateIdea(string title, string? description, string authorId,
