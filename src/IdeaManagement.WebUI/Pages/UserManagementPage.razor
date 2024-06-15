@@ -1,0 +1,125 @@
+@page "/user-management"
+@attribute [Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner},{Roles.IdeaContributor}")]
+@inject NavigationManager NavigationManager
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+    <RadzenBreadCrumb>
+        <Template Context="item">
+            <IdeaBreadCrumbTemplate ItemContext="item" />
+        </Template>
+        <ChildContent>
+            <RadzenBreadCrumbItem Text="User management" />
+        </ChildContent>
+    </RadzenBreadCrumb>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+        <RadzenText TextStyle="TextStyle.H5" Style="margin: 0">User management</RadzenText>
+    </RadzenStack>
+
+    <RadzenCard>
+        <RadzenText>This page is used for managing application users.</RadzenText>
+    </RadzenCard>
+    
+    @if (_users == null || _authState == null)
+    {
+        <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" ShowValue="@false" />
+        return;
+    }
+    
+    @if (!_users.Any())
+    {
+        <RadzenText TextStyle="TextStyle.Body2">No ideas have been found..</RadzenText>
+        return;
+    }
+
+    <RadzenDataGrid FilterCaseSensitivity="@FilterCaseSensitivity.CaseInsensitive" TItem="@DTOs.ApplicationUser" Data="@_users" PageSize="10" AllowSorting AllowPaging AllowFiltering>
+        <Columns>
+            <RadzenDataGridColumn TItem="@DTOs.ApplicationUser" Property="Name" Title="User name (email or full name)">
+                <Template>
+                    @{
+                        var userIdClaim = _authState.User.Claims.FirstOrDefault(x => x.Type == "sub");
+
+                        if (userIdClaim == null)
+                            return;
+
+                        if (userIdClaim.Value == context.UserId)
+                        {
+                            @context.Name @(" (you)")
+                        }
+                        else
+                        {
+                            @context.Name
+                        }
+                    }
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@DTOs.ApplicationUser" Property="Email" Title="Email">
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@DTOs.ApplicationUser" Property="Role" Title="Role">
+                <Template>
+                    @RoleStringMapping.GetFriendlyRoleName(context.Role)
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="@DTOs.ApplicationUser">
+                <Template>
+                    @{
+                        var userIdClaim = _authState.User.Claims.FirstOrDefault(x => x.Type == "sub");
+
+                        if (userIdClaim == null)
+                            return;
+
+                        <RadzenButton Click="@(() => EditUser(context.Name, context.UserId))" Disabled="@(userIdClaim.Value == context.UserId)" Style="width: 100%" Text="Edit" Icon="edit" />
+                    }
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</RadzenStack>
+
+@code {
+    [Inject] 
+    public HttpClient HttpClient { get; set; } = default!;
+    
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
+    [Inject]
+    public AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+
+    private List<DTOs.ApplicationUser>? _users = null;
+    private AuthenticationState? _authState = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchUsers();
+
+        _authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    }
+    
+    private async Task FetchUsers()
+    {
+        try
+        {
+            _users = await HttpClient.GetFromJsonAsync<List<DTOs.ApplicationUser>>("Auth0/qry_get_application_users");
+        }
+        catch (Exception e)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to fetch users");
+            Console.WriteLine(e.Message);
+        }
+    }
+
+    private async Task EditUser(string userHandle, string userId)
+    {
+        var result = await DialogService.OpenAsync($"Edit user {userHandle}", ds =>
+            @<RadzenStack Orientation="Orientation.Vertical">
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
+                    <RadzenButton Text="Save" Icon="save" Click="() => ds.Close(true)" />
+                    <RadzenButton Text="Cancel" Icon="close" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light"/>
+        </RadzenStack>
+        </RadzenStack>);
+    }
+}

@@ -58,7 +58,7 @@ public class Auth0Service(IConfiguration config) : IAuth0Service
         return new DTOs.ApplicationUser(user.UserId, user.FullName, user.Email, "Unknown") ?? throw new DatabaseExceptions.DocumentNotFoundException("User not found");
     }
 
-    public async Task<List<Role>> GetAllRoles()
+    public async Task<List<DTOs.ApplicationRole>> GetAllRoles()
     {
         var domain = config["auth0_authority"];
         var token = config["auth0_mgmt_api_token"];
@@ -71,8 +71,13 @@ public class Auth0Service(IConfiguration config) : IAuth0Service
         var roles = await client.Roles.GetAllAsync(new GetRolesRequest());
 
         if (roles == null)
-            return new List<Role>();
+            return new List<DTOs.ApplicationRole>();
 
-        return roles.ToList();
+        return roles.Select(x => new DTOs.ApplicationRole(x.Name, x.Id)).ToList();
+    }
+
+    public Task SetUserRole(string userId, string roleId)
+    {
+        throw new NotImplementedException();
     }
 }

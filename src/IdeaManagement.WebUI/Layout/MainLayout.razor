@@ -41,6 +41,13 @@
                     </RadzenPanelMenuItem>
                 </RadzenPanelMenu>
             </AuthorizeView>
+            <AuthorizeView Context="auth_context_four" Roles="@Roles.Administrator">
+                <RadzenPanelMenu>
+                    <RadzenPanelMenuItem Text="User management" Icon="people" Expanded="@true">
+                        <RadzenPanelMenuItem Text="Home" Icon="home" Path="/user-management"/>
+                    </RadzenPanelMenuItem>
+                </RadzenPanelMenu>
+            </AuthorizeView>
         </RadzenStack>
     </RadzenSidebar>
     <RadzenBody>
