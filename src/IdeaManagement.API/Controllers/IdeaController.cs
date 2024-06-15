@@ -16,7 +16,7 @@ namespace IdeaManagement.API.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRepository, IHubContext<IdeaHub> ideaHubContext, IAuth0Service auth0Service, ICategoryService categoryService) : ControllerBase
+public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRepository, IHubContext<IdeaHub> ideaHubContext, IAuth0Service auth0Service, ICategoryService categoryService, IStatusService statusService) : ControllerBase
 {
     private readonly IdeaHub _ideaHub = new IdeaHub(ideaHubContext, auth0Service, ideasService, categoryService);
 
@@ -158,8 +158,8 @@ public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRe
         }
     }
 
-    [HttpGet("qry_get_article_details/{ideaId}")]
-    public IActionResult GetArticleDetailsQueryHandler(string ideaId)
+    [HttpGet("qry_get_idea_details/{ideaId}")]
+    public IActionResult GetIdeaDetailsQueryHandler(string ideaId)
     {
         try
         {
@@ -231,6 +231,11 @@ public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRe
                 return Unauthorized();
 
             await ideasService.UpdateIdeaStatus(ideaId, userId, cmd.StatusId);
+
+            var ideaDetails = ideasService.GetIdeaDetails(ideaId);
+            var statusDetails = statusService.FindStatusById(cmd.StatusId);
+
+            await _ideaHub.NotifyIdeaStatusChanged(ideaId, statusDetails.Title, ideaDetails.Title);
 
             return Ok();
         }

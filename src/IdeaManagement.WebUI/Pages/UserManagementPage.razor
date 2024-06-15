@@ -91,12 +91,27 @@
 
     private List<DTOs.ApplicationUser>? _users = null;
     private AuthenticationState? _authState = null;
+    private List<DTOs.ApplicationRole>? _roles = null;
 
     protected override async Task OnInitializedAsync()
     {
         await FetchUsers();
+        await FetchRoles();
 
         _authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    }
+
+    private async Task FetchRoles()
+    {
+        try
+        {
+            _roles = await HttpClient.GetFromJsonAsync<List<DTOs.ApplicationRole>>("Auth0/qry_get_all_roles");
+        }
+        catch (Exception e)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to fetch roles");
+            Console.WriteLine(e.Message);
+        }
     }
     
     private async Task FetchUsers()

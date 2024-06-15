@@ -36,6 +36,16 @@ public class IdeaHub(IHubContext<IdeaHub> context, IAuth0Service auth0Service, I
         await context.Clients.All.SendAsync(SignalR.Methods.IdeasUpdated);
     }
 
+    public async Task NotifyNewCommentAdded(string ideaId, string ideaTitle)
+    {
+        await context.Clients.All.SendAsync(SignalR.Methods.NewCommentAdded, ideaId, ideaTitle);
+    }
+    
+    public async Task NotifyIdeaStatusChanged(string ideaId, string statusTitle, string ideaTitle)
+    {
+        await context.Clients.All.SendAsync(SignalR.Methods.IdeaStatusChanged, ideaId, statusTitle, ideaTitle);
+    }
+
     public override async Task OnConnectedAsync()
     {
         if (Context.User == null)
