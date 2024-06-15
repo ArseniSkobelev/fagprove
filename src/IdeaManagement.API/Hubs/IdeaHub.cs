@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.SignalR;
 namespace IdeaManagement.API.Hubs;
 
 [Authorize]
-public class IdeaHub(IHubContext<IdeaHub> context, UserRoleMapping userRoleMapping, IAuth0Service auth0Service, IIdeasService ideasService, ICategoryService categoryService) : Hub<IIdeaHubClient>
+public class IdeaHub(IHubContext<IdeaHub> context, IAuth0Service auth0Service, IIdeasService ideasService, ICategoryService categoryService) : Hub<IIdeaHubClient>
 {
     private static readonly HubConnectionMapping<string> _connections = new();
 
@@ -21,14 +21,29 @@ public class IdeaHub(IHubContext<IdeaHub> context, UserRoleMapping userRoleMappi
 
         if (category == null || string.IsNullOrWhiteSpace(category.OwnerId))
         {
-            await context.Clients.All.SendAsync(SignalR.Methods.NewIdeaAdded, author.Name, idea.Title);
+            await context.Clients.All.SendAsync(SignalR.Methods.NewIdeaAdded, author.Name, idea.Title, "Unknown", false);
             return;
         }
 
         foreach (var connectionId in _connections.GetConnections(category.OwnerId))
         {
-            await context.Clients.Client(connectionId).SendAsync(SignalR.Methods.NewIdeaAdded, author.Name, idea.Title);
+            await context.Clients.Client(connectionId).SendAsync(SignalR.Methods.NewIdeaAdded, author.Name, idea.Title, category.Title, true);
         }
+    }
+
+    public async Task NotifyIdeasUpdated()
+    {
+        await context.Clients.All.SendAsync(SignalR.Methods.IdeasUpdated);
+    }
+
+    public async Task NotifyNewCommentAdded(string ideaId, string ideaTitle)
+    {
+        await context.Clients.All.SendAsync(SignalR.Methods.NewCommentAdded, ideaId, ideaTitle);
+    }
+    
+    public async Task NotifyIdeaStatusChanged(string ideaId, string statusTitle, string ideaTitle)
+    {
+        await context.Clients.All.SendAsync(SignalR.Methods.IdeaStatusChanged, ideaId, statusTitle, ideaTitle);
     }
 
     public override async Task OnConnectedAsync()
@@ -39,19 +54,12 @@ public class IdeaHub(IHubContext<IdeaHub> context, UserRoleMapping userRoleMappi
             return;
         }
 
-        var userIdMaybe = Context.User.Claims.FirstOrDefault(x => x.Type == "sub");
+        var userIdMaybe = Context.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
 
         if (userIdMaybe == null)
         {
             await base.OnConnectedAsync();
             return;
-        }
-
-        var userRoleMaybe = Context.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role);
-
-        if (userRoleMaybe != null)
-        {
-            userRoleMapping.UsersWithRoles.TryAdd(userIdMaybe.Value, userRoleMaybe.Value);
         }
 
         _connections.Add(userIdMaybe.Value, Context.ConnectionId);

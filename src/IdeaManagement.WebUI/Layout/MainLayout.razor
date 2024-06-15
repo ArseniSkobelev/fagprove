@@ -1,6 +1,7 @@
 ﻿@using IdeaManagement.Shared
 @inherits LayoutComponentBase
 
+<PageTitle>Idea management software</PageTitle>
 
 <RadzenComponents />
 
@@ -37,6 +38,13 @@
                 <RadzenPanelMenu>
                     <RadzenPanelMenuItem Text="Statuses" Icon="flag" Expanded="@true">
                         <RadzenPanelMenuItem Text="List" Icon="list_alt" Path="/statuses"/>
+                    </RadzenPanelMenuItem>
+                </RadzenPanelMenu>
+            </AuthorizeView>
+            <AuthorizeView Context="auth_context_four" Roles="@Roles.Administrator">
+                <RadzenPanelMenu>
+                    <RadzenPanelMenuItem Text="User management" Icon="people" Expanded="@true">
+                        <RadzenPanelMenuItem Text="Home" Icon="home" Path="/user-management"/>
                     </RadzenPanelMenuItem>
                 </RadzenPanelMenu>
             </AuthorizeView>

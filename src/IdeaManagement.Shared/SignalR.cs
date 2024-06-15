@@ -7,5 +7,6 @@ public static class SignalR
         public const string NewIdeaAdded = "NewIdeaAdded";
         public const string NewCommentAdded = "NewCommentAdded";
         public const string IdeaStatusChanged = "IdeaStatusChanged";
+        public const string IdeasUpdated = "IdeasUpdated";
     }
 }

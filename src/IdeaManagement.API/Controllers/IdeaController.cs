@@ -16,8 +16,10 @@ namespace IdeaManagement.API.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRepository) : ControllerBase
+public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRepository, IHubContext<IdeaHub> ideaHubContext, IAuth0Service auth0Service, ICategoryService categoryService, IStatusService statusService) : ControllerBase
 {
+    private readonly IdeaHub _ideaHub = new IdeaHub(ideaHubContext, auth0Service, ideasService, categoryService);
+
     [Authorize(Roles = $"{Roles.IdeaContributor},{Roles.Administrator},{Roles.CategoryOwner}")]
     [HttpPost("cmd_create_idea")]
     public async Task<IActionResult> CreateIdeaCommandHandler([FromBody] Commands.CreateIdeaCommand cmd)
@@ -39,8 +41,10 @@ public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRe
                 ? $"{fName.Value} {sName.Value}"
                 : email?.Value ?? "Unknown";
 
-            await ideasService
+            var idea = await ideasService
                 .CreateIdea(cmd.Title, cmd.Description, userId, authorHandle, cmd.CategoryId);
+
+            await _ideaHub.NotifyNewIdeaAdded(idea.AuthorId, idea.Id, idea.CategoryId);
 
             return Ok();
         }
@@ -75,6 +79,9 @@ public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRe
                 return Unauthorized();
 
             await ideasService.DeleteIdea(ideaId, userId);
+
+            await _ideaHub.NotifyIdeasUpdated();
+
             return Ok();
         }
         catch (UnauthorizedAccessException e)
@@ -151,8 +158,8 @@ public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRe
         }
     }
 
-    [HttpGet("qry_get_article_details/{ideaId}")]
-    public IActionResult GetArticleDetailsQueryHandler(string ideaId)
+    [HttpGet("qry_get_idea_details/{ideaId}")]
+    public IActionResult GetIdeaDetailsQueryHandler(string ideaId)
     {
         try
         {
@@ -224,6 +231,11 @@ public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRe
                 return Unauthorized();
 
             await ideasService.UpdateIdeaStatus(ideaId, userId, cmd.StatusId);
+
+            var ideaDetails = ideasService.GetIdeaDetails(ideaId);
+            var statusDetails = statusService.FindStatusById(cmd.StatusId);
+
+            await _ideaHub.NotifyIdeaStatusChanged(ideaId, statusDetails.Title, ideaDetails.Title);
 
             return Ok();
         }

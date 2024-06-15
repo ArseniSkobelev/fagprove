@@ -12,4 +12,5 @@ public static class Commands
     public record UpdateIdeaCategoryCommand(string CategoryId);
     public record UpdateCategoryOwnerCommand(string OwnerId);
     public record AddCommentCommand(string IdeaId, string Content, string? RepliesToCommentId);
+    public record SetUserRoleCommand(string userId, string roleId);
 }

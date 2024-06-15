@@ -6,4 +6,6 @@ public interface IAuth0Service
 {
     public Task<List<DTOs.ApplicationUser>> GetApplicationUsers();
     public Task<DTOs.ApplicationUser> GetUserById(string userId);
+    public Task<List<DTOs.ApplicationRole>> GetAllRoles();
+    public Task SetUserRole(string userId, string roleId);
 }

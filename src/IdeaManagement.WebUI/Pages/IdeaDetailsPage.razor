@@ -246,7 +246,7 @@
     {
         try
         {
-            _idea = await HttpClient.GetFromJsonAsync<DTOs.IdeaFull>($"Idea/qry_get_article_details/{Id}");
+            _idea = await HttpClient.GetFromJsonAsync<DTOs.IdeaFull>($"Idea/qry_get_idea_details/{Id}");
 
             _votes = await HttpClient.GetFromJsonAsync<List<string>>("Idea/qry_get_user_upvotes");
 

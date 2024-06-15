@@ -30,6 +30,8 @@ public static class DTOs
         string Email,
         string Role);
 
+    public record ApplicationRole(string Title, string Id);
+
     public record CommentDetails(
         string Id,
         string Content,

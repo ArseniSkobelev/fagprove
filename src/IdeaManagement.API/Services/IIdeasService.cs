@@ -5,7 +5,7 @@ namespace IdeaManagement.API.Services;
 
 public interface IIdeasService
 {
-    public Task CreateIdea(string title, string? description, string authorId, string authorHandle, string categoryId);
+    public Task<Idea> CreateIdea(string title, string? description, string authorId, string authorHandle, string categoryId);
     public List<DTOs.IdeaSlim> GetAllIdeas();
     public DTOs.IdeaFull GetIdeaDetails(string ideaId);
     public Task DeleteIdea(string ideaId, string userId);
