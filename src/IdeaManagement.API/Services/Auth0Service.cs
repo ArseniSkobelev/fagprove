@@ -37,7 +37,7 @@ public class Auth0Service(IConfiguration config) : IAuth0Service
             
             userRoles.ToList().ForEach(x => roleList.Add(x.Name));
             
-            _users.Add(new DTOs.ApplicationUser(user.UserId, user.FullName, user.Email, string.Join(",", roleList)));
+            _users.Add(new DTOs.ApplicationUser(user.UserId, user.FullName, user.Email, string.Join(",", roleList), user.Blocked ?? false));
         }
 
         return _users;
@@ -55,7 +55,7 @@ public class Auth0Service(IConfiguration config) : IAuth0Service
         
         var user = await client.Users.GetAsync(userId);
         
-        return new DTOs.ApplicationUser(user.UserId, user.FullName, user.Email, "Unknown") ?? throw new DatabaseExceptions.DocumentNotFoundException("User not found");
+        return new DTOs.ApplicationUser(user.UserId, user.FullName, user.Email, "Unknown", user.Blocked ?? false) ?? throw new DatabaseExceptions.DocumentNotFoundException("User not found");
     }
 
     public async Task<List<DTOs.ApplicationRole>> GetAllRoles()
@@ -76,8 +76,65 @@ public class Auth0Service(IConfiguration config) : IAuth0Service
         return roles.Select(x => new DTOs.ApplicationRole(x.Name, x.Id)).ToList();
     }
 
-    public Task SetUserRole(string userId, string roleId)
+    public async Task SetUserRole(string userId, string roleId, string? currRoleId)
     {
-        throw new NotImplementedException();
+        var domain = config["auth0_authority"];
+        var token = config["auth0_mgmt_api_token"];
+
+        if (string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(token))
+            throw new InvalidConfigurationException("Auth0 configuration missing");
+        
+        var client = new ManagementApiClient(token, new Uri($"{domain}/api/v2"));
+
+        // remove curr role
+        if (!string.IsNullOrWhiteSpace(currRoleId))
+        {
+            var roleRemovalRequest = new AssignRolesRequest();
+
+            roleRemovalRequest.Roles = new[] { currRoleId };
+            
+            await client.Users.RemoveRolesAsync(userId, roleRemovalRequest);
+        }
+
+        var rolesAssignmentRequest = new AssignRolesRequest();
+
+        rolesAssignmentRequest.Roles = new[] { roleId };
+        
+        // assign required role
+        await client.Users.AssignRolesAsync(userId, rolesAssignmentRequest);
+    }
+
+    public async Task BlockUser(string userId)
+    {
+        var domain = config["auth0_authority"];
+        var token = config["auth0_mgmt_api_token"];
+
+        if (string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(token))
+            throw new InvalidConfigurationException("Auth0 configuration missing");
+        
+        var client = new ManagementApiClient(token, new Uri($"{domain}/api/v2"));
+
+        var updateRequest = new UserUpdateRequest();
+
+        updateRequest.Blocked = true;
+
+        await client.Users.UpdateAsync(userId, updateRequest);
+    }
+
+    public async Task UnblockUser(string userId)
+    {
+        var domain = config["auth0_authority"];
+        var token = config["auth0_mgmt_api_token"];
+
+        if (string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(token))
+            throw new InvalidConfigurationException("Auth0 configuration missing");
+        
+        var client = new ManagementApiClient(token, new Uri($"{domain}/api/v2"));
+
+        var updateRequest = new UserUpdateRequest();
+
+        updateRequest.Blocked = false;
+
+        await client.Users.UpdateAsync(userId, updateRequest);
     }
 }

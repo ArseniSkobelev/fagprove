@@ -1,6 +1,7 @@
 using IdeaManagement.Shared;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.SignalR.Client;
 using Radzen;
 using HubConnectionBuilder = IdeaManagement.WebUI.Domain.SignalR.HubConnectionBuilder;
@@ -20,16 +21,20 @@ public partial class MainLayout
     
     [Inject] 
     public NavigationManager NavigationManager { get; set; } = default!;
+
+    [Inject] 
+    public SignOutSessionStateManager SignOutSessionStateManager { get; set; } = default!;
     
     private bool _sidebarExpanded = true;
     private HubConnection? _ideaHub = null;
+    private HubConnection? _auth0Hub = null;
 
     protected override async Task OnInitializedAsync()
     {
-        await InitializeSignalRConnection();
+        await InitializeHubConnection();
     }
 
-    private async Task InitializeSignalRConnection(bool retry = false)
+    private async Task InitializeHubConnection(bool retry = false)
     {
         var restApiUri = Configuration["restapi_uri"];
 
@@ -38,13 +43,16 @@ public partial class MainLayout
 
         _ideaHub = await CustomHubConnectionBuilder
             .BuildAuthenticatedHubConnectionAsync($"{restApiUri}{Constants.SignalRHubs.Ideas}");
+        
+        _auth0Hub = await CustomHubConnectionBuilder
+            .BuildAuthenticatedHubConnectionAsync($"{restApiUri}{Constants.SignalRHubs.Auth0}");
 
-        if (_ideaHub == null)
+        if (_ideaHub == null || _auth0Hub == null)
         {
             NotificationService.Notify(NotificationSeverity.Error,
                 "Unable to enable notifications. Please click this notification to retry connection",
                 closeOnClick: true,
-                click: async (nm) => { await InitializeSignalRConnection(true); }, duration: 10000);
+                click: async (nm) => { await InitializeHubConnection(true); }, duration: 10000);
             return;
         }
 
@@ -52,13 +60,28 @@ public partial class MainLayout
         _ideaHub.On<string, string>(SignalR.Methods.NewCommentAdded, HandleNewCommentAdded);
         _ideaHub.On<string, string, string>(SignalR.Methods.IdeaStatusChanged, HandleIdeaStatusChanged);
         _ideaHub.On(SignalR.Methods.IdeasUpdated, HandleIdeasUpdated);
+        _auth0Hub.On(SignalR.Methods.UserRoleUpdated, HandleUserRoleUpdated);
+        _auth0Hub.On(SignalR.Methods.UserBlockStatusUpdated, HandleUserBlockStatusUpdated);
 
         await _ideaHub.StartAsync();
+        await _auth0Hub.StartAsync();
 
         if (retry)
         {
             NotificationService.Notify(NotificationSeverity.Success, "Notifications enabled successfully");
         }
+    }
+
+    private async Task HandleUserBlockStatusUpdated()
+    {
+        await SignOutSessionStateManager.SetSignOutState();
+        NavigationManager.NavigateTo("authentication/logout");
+    }
+
+    private async Task HandleUserRoleUpdated()
+    {
+        await SignOutSessionStateManager.SetSignOutState();
+        NavigationManager.NavigateTo("authentication/logout");
     }
 
     private async Task HandleIdeasUpdated()
