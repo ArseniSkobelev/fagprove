@@ -14,13 +14,13 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace IdeaManagement.API.Controllers;
 
+[Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner},{Roles.IdeaContributor}")]
 [ApiController]
 [Route("[controller]")]
 public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRepository, IHubContext<IdeaHub> ideaHubContext, IAuth0Service auth0Service, ICategoryService categoryService, IStatusService statusService) : ControllerBase
 {
     private readonly IdeaHub _ideaHub = new IdeaHub(ideaHubContext, auth0Service, ideasService, categoryService);
 
-    [Authorize(Roles = $"{Roles.IdeaContributor},{Roles.Administrator},{Roles.CategoryOwner}")]
     [HttpPost("cmd_create_idea")]
     public async Task<IActionResult> CreateIdeaCommandHandler([FromBody] Commands.CreateIdeaCommand cmd)
     {

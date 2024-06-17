@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdeaManagement.API.Controllers;
 
+[Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner},{Roles.IdeaContributor}")]
 [ApiController]
 [Route("[controller]")]
 public class StatusController(IStatusService _statusService) : ControllerBase
