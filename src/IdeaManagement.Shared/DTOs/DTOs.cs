@@ -28,7 +28,8 @@ public static class DTOs
         string UserId,
         string Name,
         string Email,
-        string Role);
+        string Role,
+        bool Blocked);
 
     public record ApplicationRole(string Title, string Id);
 

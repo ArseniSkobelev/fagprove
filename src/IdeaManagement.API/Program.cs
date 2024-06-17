@@ -107,7 +107,6 @@ var builder = WebApplication.CreateBuilder(args);
     builder.Services.AddScoped<IIdeasService, IdeasService>();
     builder.Services.AddScoped<IAuth0Service, Auth0Service>();
     builder.Services.AddScoped<ICommentRepository, CommentRepository>();
-    builder.Services.AddScoped<UserRoleMapping, UserRoleMapping>();
 
     // add mongodb to di container
     builder.Services.AddSingleton(new MongoClient(new MongoUrl(builder.Configuration["mongodb_connection_string"] ?? throw new Exception("No MongoDB connection string found"))).GetDatabase("IdeaManagement"));
@@ -140,6 +139,7 @@ var app = builder.Build();
 
     // map signalr hubs
     app.MapHub<IdeaHub>(Constants.SignalRHubs.Ideas);
+    app.MapHub<Auth0Hub>(Constants.SignalRHubs.Auth0);
     
     app.Run();
 }

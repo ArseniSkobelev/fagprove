@@ -1,4 +1,4 @@
-@page "/user-management"
+@page "/users"
 @attribute [Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner},{Roles.IdeaContributor}")]
 @inject NavigationManager NavigationManager
 
@@ -20,7 +20,7 @@
         <RadzenText>This page is used for managing application users.</RadzenText>
     </RadzenCard>
     
-    @if (_users == null || _authState == null)
+    @if (_users == null || _authState == null || _roles == null)
     {
         <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate" ShowValue="@false" />
         return;
@@ -68,7 +68,7 @@
                         if (userIdClaim == null)
                             return;
 
-                        <RadzenButton Click="@(() => EditUser(context.Name, context.UserId))" Disabled="@(userIdClaim.Value == context.UserId)" Style="width: 100%" Text="Edit" Icon="edit" />
+                        <RadzenButton IsBusy="@_editingUser" Click="@(() => EditUser(context.Name, context.UserId, context.Role))" Disabled="@(userIdClaim.Value == context.UserId)" Style="width: 100%" Text="Edit" Icon="edit" />
                     }
                 </Template>
             </RadzenDataGridColumn>
@@ -92,6 +92,8 @@
     private List<DTOs.ApplicationUser>? _users = null;
     private AuthenticationState? _authState = null;
     private List<DTOs.ApplicationRole>? _roles = null;
+    private string? _tempUserRole = null;
+    private bool _editingUser = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -127,14 +129,123 @@
         }
     }
 
-    private async Task EditUser(string userHandle, string userId)
+    private async Task EditUser(string userHandle, string userId, string currUserRole)
     {
+        if (_roles == null || _users == null)
+            return;
+
+        var currUser = _users.FirstOrDefault(x => x.UserId == userId);
+
+        if (currUser == null)
+            return;
+
+        _tempUserRole = currUser.Role;
+
+        _editingUser = true;
+        
         var result = await DialogService.OpenAsync($"Edit user {userHandle}", ds =>
             @<RadzenStack Orientation="Orientation.Vertical">
+                @if (currUser.Blocked)
+                {
+                    <RadzenButton Text="Unblock user" Click="@(async () => { ds.Close(); await UnblockUser(userId); })" Style="width: fit-content" Icon="block" ButtonStyle="ButtonStyle.Danger" />
+                }
+                else
+                {
+                    <RadzenButton Text="Block user" Click="@(async () => { ds.Close(); await BlockUser(userId); })" Style="width: fit-content" Icon="block" ButtonStyle="ButtonStyle.Danger" />
+                }
+                <RadzenStack Orientation="Orientation.Vertical" Gap=".25rem">
+                    <RadzenText>User role</RadzenText>
+                    <RadzenDropDown @bind-Value="@_tempUserRole" Data="@_roles.Select(x => x.Title)">
+                        <Template>
+                            @RoleStringMapping.GetFriendlyRoleName(context)
+                        </Template>
+                        <ValueTemplate>
+                            @RoleStringMapping.GetFriendlyRoleName(context)
+                        </ValueTemplate>
+                    </RadzenDropDown>
+                </RadzenStack>
                 <RadzenStack Orientation="Orientation.Horizontal" Gap="16">
-                    <RadzenButton Text="Save" Icon="save" Click="() => ds.Close(true)" />
+                    <RadzenButton Text="Save" Icon="save" Click="() => ds.Close(true)"/>
                     <RadzenButton Text="Cancel" Icon="close" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light"/>
         </RadzenStack>
         </RadzenStack>);
+
+        if (result is not bool or false)
+        {
+            _editingUser = false;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_tempUserRole))
+        {
+            _editingUser = false;
+            return;
+        }
+        
+        try
+        {
+            var newRole = _roles.FirstOrDefault(x => x.Title == _tempUserRole);
+            
+            var currRole = _roles.FirstOrDefault(x => x.Title == currUserRole);
+
+            if (newRole == null || newRole.Id == currRole?.Id)
+            {
+                _editingUser = false;
+                return;
+            }
+            
+            var cmd = new Commands.SetUserRoleCommand(userId, newRole.Id, currRole?.Id);
+            
+            await HttpClient.PostAsJsonAsync("Auth0/cmd_set_user_role", cmd);
+
+            await FetchUsers();
+            
+            NotificationService.Notify(NotificationSeverity.Success, "User role updated successfully");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to update user role. Please try again later");
+        }
+
+        _editingUser = false;
+    }
+
+    private async Task BlockUser(string userId)
+    {
+        try
+        {
+            var cmd = new Commands.BlockUserCommand(userId);
+            
+            await HttpClient.PostAsJsonAsync("Auth0/cmd_block_user", cmd);
+
+            NotificationService.Notify(NotificationSeverity.Success, "User blocked successfully");
+            
+            NavigationManager.NavigateTo(NavigationManager.Uri, true);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to block user. Please try again later");
+        }
+    }
+    
+    private async Task UnblockUser(string userId)
+    {
+        try
+        {
+            var cmd = new Commands.UnblockUserCommand(userId);
+            
+            await HttpClient.PostAsJsonAsync("Auth0/cmd_unblock_user", cmd);
+
+            NotificationService.Notify(NotificationSeverity.Success, "User unblocked successfully");
+            
+            NavigationManager.NavigateTo(NavigationManager.Uri, true);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationService.Notify(NotificationSeverity.Error, "Unable to unblock user. Please try again later");
+        }
     }
 }

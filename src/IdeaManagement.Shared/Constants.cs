@@ -15,6 +15,7 @@ public static class Constants
     {
         public const string Base = "/hubs";
         public const string Ideas = $"{Base}/ideas";
+        public const string Auth0 = $"{Base}/auth0";
     }
 
     public static class DefaultStatuses

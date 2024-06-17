@@ -30,23 +30,4 @@ public class HubConnectionMapping<T> where T : notnull
 
         return Enumerable.Empty<string>();
     }
-
-    public void Remove(T key, string connectionId)
-    {
-        lock (_connections)
-        {
-            if (!_connections.TryGetValue(key, out var connections))
-                return;
-
-            lock (connections)
-            {
-                connections.Remove(connectionId);
-
-                if (connections.Count == 0)
-                {
-                    _connections.Remove(key);
-                }
-            }
-        }
-    }
 }
