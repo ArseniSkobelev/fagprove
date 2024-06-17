@@ -140,6 +140,8 @@ var app = builder.Build();
     // map signalr hubs
     app.MapHub<IdeaHub>(Constants.SignalRHubs.Ideas);
     app.MapHub<Auth0Hub>(Constants.SignalRHubs.Auth0);
+
+    app.MapGet("/health", () => "Healthy");
     
     app.Run();
 }

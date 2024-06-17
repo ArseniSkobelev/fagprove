@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdeaManagement.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class StatusController(IStatusService _statusService) : ControllerBase

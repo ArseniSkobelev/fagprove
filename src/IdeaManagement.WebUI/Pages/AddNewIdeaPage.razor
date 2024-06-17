@@ -1,5 +1,5 @@
 @page "/add"
-@using IdeaManagement.Shared.DTOs
+@attribute [Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner},{Roles.IdeaContributor}")]
 
 <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
     <RadzenBreadCrumb>

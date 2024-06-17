@@ -1,5 +1,5 @@
 @page "/users"
-@attribute [Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner},{Roles.IdeaContributor}")]
+@attribute [Authorize(Roles = Roles.Administrator)]
 @inject NavigationManager NavigationManager
 
 <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
