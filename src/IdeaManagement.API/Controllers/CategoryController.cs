@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdeaManagement.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner},{Roles.IdeaContributor}")]
 [ApiController]
 [Route("[controller]")]
 public class CategoryController(ICategoryService categoryService) : ControllerBase

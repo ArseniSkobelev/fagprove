@@ -1,5 +1,6 @@
 using IdeaManagement.API.Extensions;
 using IdeaManagement.API.Repositories;
+using IdeaManagement.Shared;
 using IdeaManagement.Shared.DTOs;
 using IdeaManagement.Shared.Exceptions;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdeaManagement.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner},{Roles.IdeaContributor}")]
 [ApiController]
 [Route("[controller]")]
 public class CommentsController(ICommentRepository commentRepository) : ControllerBase

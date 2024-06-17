@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace IdeaManagement.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = $"{Roles.Administrator},{Roles.CategoryOwner},{Roles.IdeaContributor}")]
 [ApiController]
 [Route("[controller]")]
 public class IdeaController(IIdeasService ideasService, IIdeasRepository ideasRepository, IHubContext<IdeaHub> ideaHubContext, IAuth0Service auth0Service, ICategoryService categoryService, IStatusService statusService) : ControllerBase
