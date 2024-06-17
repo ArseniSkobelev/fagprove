@@ -11,7 +11,7 @@ namespace IdeaManagement.API.Controllers;
 [Authorize(Roles = Roles.Administrator)]
 [ApiController]
 [Route("[controller]")]
-public class Auth0Controller(IAuth0Service auth0Service, IHubContext<Auth0Hub> auth0HubContext) : ControllerBase
+public class Auth0Controller(IAuth0Service auth0Service, IHubContext<Auth0Hub> auth0HubContext, ICategoryService categoryService) : ControllerBase
 {
     private readonly Auth0Hub _auth0Hub = new Auth0Hub(auth0HubContext);
     
@@ -54,6 +54,8 @@ public class Auth0Controller(IAuth0Service auth0Service, IHubContext<Auth0Hub> a
         {
             await auth0Service.SetUserRole(cmd.UserId, cmd.RoleId, cmd.CurrRoleId);
 
+            await categoryService.RemoveCategoryOwner(cmd.UserId);
+            
             await _auth0Hub.UserRoleUpdated(cmd.UserId);
 
             return Ok();

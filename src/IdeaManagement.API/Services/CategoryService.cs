@@ -35,4 +35,16 @@ public class CategoryService(ICategoryRepository categoryRepository) : ICategory
 
         return userOwnedCategories;
     }
+
+    public async Task RemoveCategoryOwner(string userId)
+    {
+        var categories = categoryRepository.GetAllCategories();
+
+        var userOwnedCategories = categories.Where(x => x.OwnerId == userId);
+
+        foreach (var category in userOwnedCategories)
+        {
+            await categoryRepository.UpdateCategoryOwner(category.Id, null);
+        }
+    }
 }

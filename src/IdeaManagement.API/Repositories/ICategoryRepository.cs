@@ -10,5 +10,5 @@ public interface ICategoryRepository
     public Category FindCategoryById(string categoryId);
     public Task DeleteCategoryById(string categoryId);
     public Task UpdateCategoryTitleById(string categoryId, string newTitle);
-    public Task UpdateCategoryOwner(string categoryId, string ownerId);
+    public Task UpdateCategoryOwner(string categoryId, string? ownerId);
 }
